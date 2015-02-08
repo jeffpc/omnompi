@@ -47,6 +47,9 @@
 #define	UART_CR_TXE		0x100		/* TX enable */
 #define	UART_CR_RXE		0x200		/* RX enable */
 
+#define UART_CLK	3000000
+#define UART_RATE	115200
+
 
 /*
  * All we care about are pins 14 and 15 for the UART.  Specifically, alt0
@@ -72,6 +75,35 @@ static void
 bcm2835_uart_nop(void)
 {
 	__asm__ volatile("mov r0, r0\n" : : :);
+}
+
+/*
+ * uartclk / (16 * bps) = rate
+ * IBRD = (int) rate
+ * FBRD = (int) (fraction(rate) * 64 + 0.5)
+ *
+ * To avoid floating point math, we pretend that the clock runs 128 times
+ * faster.  This will yield a rate that's 128x.  For the integer part, we
+ * can simply divide by 128.  For the floating point part, we subtract away
+ * the integer part worth, add one (this is 1/128 of the actual rate, which
+ * is 0.5 of 1/64), and then divide by 2.
+ *
+ * It is safe for us to mulitply the rate by 128 since the clock normally
+ * runs at 3 MHz (384 MHz still fits into a 32-bit register).
+ */
+static void
+bcm2835_uart_set_baud_rate()
+{
+	uint32_t clk = UART_CLK * 128;
+	uint32_t rate;
+	uint32_t i, f;
+
+	rate = clk / (16 * UART_RATE);
+	i = rate / 128;
+	f = ((rate - i * 128) + 1) / 2;
+
+	arm_reg_write(UART_BASE + UART_IBRD, i);
+	arm_reg_write(UART_BASE + UART_FBRD, f);
 }
 
 void
@@ -102,8 +134,7 @@ bcm2835_uart_init(void)
 	arm_reg_write(UART_BASE + UART_ICR, 0x7ff);
 
 	/* set the baud rate */
-	arm_reg_write(UART_BASE + UART_IBRD, 1);
-	arm_reg_write(UART_BASE + UART_FBRD, 40);
+	bcm2835_uart_set_baud_rate();
 
 	/* select 8-bit, enable FIFOs */
 	arm_reg_write(UART_BASE + UART_LCRH, UART_LCRH_WLEN_8 | UART_LCRH_FEN);
