@@ -24,6 +24,7 @@
 
 uint32_t raw_bytes;
 uint32_t compressed_bytes;
+uint32_t skipped_bytes;
 
 /*
  * Keeps track of free ranges of RAM
@@ -223,6 +224,8 @@ static void __mem_clear(uint32_t addr, uint32_t len)
 	write(1, &xfer, sizeof(xfer));
 
 	checkstatus();
+
+	skipped_bytes += len;
 }
 
 static void __mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
@@ -352,8 +355,10 @@ int main(int argc, char **argv)
 	done(KERNEL_ADDR);
 
 	fprintf(stderr, "raw bytes        %u\n", raw_bytes);
+	fprintf(stderr, "skipped bytes    %u\n", skipped_bytes);
 	fprintf(stderr, "compressed bytes %u\n", compressed_bytes);
 	fprintf(stderr, "ratio            %f\n", compressed_bytes / (float) raw_bytes);
+	fprintf(stderr, "total ratio      %f\n", compressed_bytes / (float) (skipped_bytes + raw_bytes));
 
 	return 0;
 }
