@@ -5,15 +5,15 @@ ARMLD=/opt/armtc/usr/bin/ld
 ARMOBJCOPY=/opt/armtc/usr/gnu/bin/gobjcopy
 
 CFLAGS=-Wall -O2 -g -DDEBUG
-ARMCFLAGS=-ffreestanding
+ARMCFLAGS=-ffreestanding -DTGT
 
 all: host tgt
 
 clean:
 	rm -f host tgt
 
-host: host.c
-	$(CC) $(CFLAGS) -o $@ $< /usr/lib/libavl.so.1
+host: host.c lz4.c
+	$(CC) $(CFLAGS) -o $@ $^ /usr/lib/libavl.so.1
 
 tgt: tgt.c tgt_start.s bcm2835_uart.c tgt_support.c
 	$(ARMCC) -x assembler-with-cpp -c -o tgt_start.o tgt_start.s

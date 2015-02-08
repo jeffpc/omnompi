@@ -14,6 +14,7 @@
 #include <netinet/in.h>
 
 #include "proto.h"
+#include "lz4.h"
 
 #define	KERNEL_ADDR	0x8000ul
 #define RANDOM_ADDR	~0ul
@@ -23,6 +24,8 @@
 
 uint32_t padded_bytes;
 uint32_t raw_bytes;
+uint32_t compressed_bytes;
+
 /*
  * Keeps track of free ranges of RAM
  */
@@ -206,7 +209,9 @@ static void checkstatus()
 
 static void mem_write(struct xferbuf *buf, uint32_t addr, uint32_t len)
 {
+	uint8_t tmp[XFER_SIZE];
 	struct xferclear clear;
+	uint32_t clen;
 	enum cmd cmd;
 	int i;
 
@@ -240,6 +245,9 @@ copy:
 
 	padded_bytes += XFER_SIZE;
 	raw_bytes += len;
+
+	clen = lz4_compress(buf->buf, tmp, len, XFER_SIZE, 0);
+	compressed_bytes += (clen > len) ? len : clen;
 }
 
 static void xfer(int fd, uint32_t addr, uint32_t off, uint32_t len)
@@ -326,5 +334,8 @@ int main(int argc, char **argv)
 
 	fprintf(stderr, "padded bytes     %u\n", padded_bytes);
 	fprintf(stderr, "raw bytes        %u\n", raw_bytes);
+	fprintf(stderr, "compressed bytes %u\n", compressed_bytes);
+	fprintf(stderr, "ratio            %f\n", compressed_bytes / (float) raw_bytes);
+
 	return 0;
 }
