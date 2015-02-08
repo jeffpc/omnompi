@@ -203,7 +203,7 @@ static void checkstatus()
 
 	read(0, &resp, 1);
 
-	fprintf(stderr, "%s (%c)\n", resp ? "ok" : "failed", resp);
+	fprintf(stderr, "%s (%c)\n", (resp == '+') ? "ok" : "failed", resp);
 	ASSERT(resp == '+');
 }
 
