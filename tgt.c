@@ -136,8 +136,6 @@ static void handle_mem_read()
 
 	write(&xfer, sizeof(xfer));
 	write((void *)addr, len);
-
-	send_ack();
 }
 
 static void handle_reg_write()
