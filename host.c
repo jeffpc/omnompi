@@ -15,6 +15,7 @@
 
 #include "proto.h"
 #include "lz4.h"
+#include "atag.h"
 
 #define	KERNEL_ADDR	0x8000ul
 #define RANDOM_ADDR	~0ul
@@ -272,6 +273,24 @@ static void mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
 	__mem_clear(addr, len);
 }
 
+static void fullread(int fd, void *buf, uint32_t len)
+{
+	uint8_t *ptr = buf;
+	ssize_t ret;
+	size_t x;
+
+	x = 0;
+	while (x != len) {
+		ret = read(fd, &ptr[x], len - x);
+		if (!ret)
+			ASSERT(0);
+		if (ret == -1)
+			ASSERT(0);
+
+		x += ret;
+	}
+}
+
 static void xfer(int fd, uint32_t addr, uint32_t off, uint32_t len)
 {
 	uint8_t buf[XFER_SIZE];
@@ -294,7 +313,7 @@ static void xfer(int fd, uint32_t addr, uint32_t off, uint32_t len)
 	mem_write(buf, addr, len);
 }
 
-static void upload(const char *fname, uint32_t addr)
+static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *rlen)
 {
 	struct stat statinfo;
 	uint32_t len;
@@ -319,10 +338,72 @@ static void upload(const char *fname, uint32_t addr)
 		     ((len - off) >= XFER_SIZE) ? XFER_SIZE : (len - off));
 
 	close(fd);
+
+	if (raddr)
+		*raddr = addr;
+	if (rlen)
+		*rlen = len;
 }
 
-static void tweak_atags()
+static uint32_t read_mem(uint8_t *buf, uint32_t addr, uint32_t len)
 {
+	struct xfermem xfer;
+	enum cmd cmd;
+
+	fprintf(stderr, "Requesting %#010x.%#010x...", addr, len);
+
+	cmd = htonl(CMD_MEM_READ);
+	xfer.addr = htonl(addr);
+	xfer.len  = htonl(len);
+	xfer.comp = 0;
+
+	write(1, &cmd, sizeof(cmd));
+	write(1, &xfer, sizeof(xfer));
+
+	checkstatus();
+
+	fprintf(stderr, "Reading header...\n");
+
+	fullread(0, &xfer, sizeof(xfer));
+
+	xfer.addr = ntohl(xfer.addr);
+	xfer.len  = ntohl(xfer.len);
+	xfer.comp = ntohl(xfer.comp);
+
+	ASSERT(xfer.comp == 0);
+	ASSERT(xfer.len <= len);
+
+	fprintf(stderr, "Reading data for %#010x.%#010x...", xfer.addr,
+		xfer.len);
+
+	fullread(0, buf, xfer.len);
+
+	checkstatus();
+
+	return xfer.len;
+}
+
+static void tweak_atags(uint32_t initrd_addr, uint32_t initrd_len)
+{
+	atag_initrd_t atag;
+	uint8_t buf[0x8000];
+	uint32_t len;
+
+	fprintf(stderr, "Setting ATAG_INITRD2...\n");
+
+	len = read_mem(buf, 0, sizeof(buf));
+	ASSERT(len == sizeof(buf));
+
+	fprintf(stderr, "Updating ATAGs...\n");
+	atag.ai_header.ah_tag = ATAG_INITRD2;
+	atag.ai_header.ah_size = 0x4;
+	atag.ai_start = initrd_addr;
+	atag.ai_size  = initrd_len;
+
+	atag_append((atag_header_t *)&buf[0x100], &atag.ai_header);
+
+	fprintf(stderr, "Writing out updated first %dkB\n", sizeof(buf) / 1024);
+	mem_write(buf, 0, sizeof(buf));
 }
 
 static void done(uint32_t pc)
@@ -342,15 +423,17 @@ static void done(uint32_t pc)
 
 int main(int argc, char **argv)
 {
+	uint32_t initrd_addr, initrd_len;
+
 	if (argc != 3)
 		usage(argv[0]);
 
 	setup_ramranges();
 
-	upload(argv[1], KERNEL_ADDR);
-	upload(argv[2], RANDOM_ADDR);
+	upload(argv[1], KERNEL_ADDR, NULL, NULL);
+	upload(argv[2], RANDOM_ADDR, &initrd_addr, &initrd_len);
 
-	tweak_atags();
+	tweak_atags(initrd_addr, initrd_len);
 
 	done(KERNEL_ADDR);
 

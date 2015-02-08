@@ -12,7 +12,7 @@ all: host tgt
 clean:
 	rm -f host tgt
 
-host: host.c lz4.c
+host: host.c lz4.c atag.c
 	$(CC) $(CFLAGS) -o $@ $^ /usr/lib/libavl.so.1
 
 tgt: tgt.c tgt_start.s bcm2835_uart.c tgt_support.c
