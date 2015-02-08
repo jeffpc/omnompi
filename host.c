@@ -349,6 +349,11 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 
 	addr = alloc_addr(addr, len);
 
+	if (raddr)
+		*raddr = addr;
+	if (rlen)
+		*rlen = len;
+
 	fprintf(stderr, "%s @ %#010x is %u bytes\n", fname, addr, len);
 
 	for (off = 0; off < len; addr += XFER_SIZE, off += XFER_SIZE)
@@ -356,11 +361,6 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 		     ((len - off) >= XFER_SIZE) ? XFER_SIZE : (len - off));
 
 	close(fd);
-
-	if (raddr)
-		*raddr = addr;
-	if (rlen)
-		*rlen = len;
 }
 
 static uint32_t read_mem(uint8_t *buf, uint32_t addr, uint32_t len)
