@@ -192,14 +192,6 @@ lz4_decompress(void *s_start, void *d_start, size_t s_len, size_t d_len, int n)
 #endif
 
 /*
- * Limits the amount of stack space that the algorithm may consume to hold
- * the compression lookup table. The value `9' here means we'll never use
- * more than 2k of stack (see above for a description of COMPRESSIONLEVEL).
- * If more memory is needed, it is allocated from the heap.
- */
-#define	STACKLIMIT 9
-
-/*
  * Little Endian or Big Endian?
  * Note: overwrite the below #define if you know your architecture endianess.
  */
@@ -324,11 +316,6 @@ typedef struct _U64_S {
 #define	SKIPSTRENGTH (NOTCOMPRESSIBLE_CONFIRMATION > 2 ? \
 	NOTCOMPRESSIBLE_CONFIRMATION : 2)
 
-/*
- * Defines if memory is allocated into the stack (local variable),
- * or into the heap (kmem_alloc()).
- */
-//#define	HEAPMODE (HASH_LOG > STACKLIMIT)
 #define	COPYLENGTH 8
 #define	LASTLITERALS 5
 #define	MFLIMIT (COPYLENGTH + MINMATCH)
@@ -499,13 +486,7 @@ static int
 LZ4_compressCtx(void *ctx, const char *source, char *dest, int isize,
     int osize)
 {
-#if HEAPMODE
-	struct refTables *srt = (struct refTables *)ctx;
-	HTYPE *HashTable = (HTYPE *) (srt->hashTable);
-#else
-	HTYPE HashTable[HASHTABLESIZE] = { 0 };
-#endif
-
+	static HTYPE HashTable[HASHTABLESIZE];
 	const BYTE *ip = (BYTE *) source;
 	INITBASE(base);
 	const BYTE *anchor = ip;
@@ -513,6 +494,8 @@ LZ4_compressCtx(void *ctx, const char *source, char *dest, int isize,
 	const BYTE *const oend = (BYTE *) dest + osize;
 	const BYTE *const mflimit = iend - MFLIMIT;
 #define	matchlimit (iend - LASTLITERALS)
+
+	memset(HashTable, 0, sizeof(HashTable));
 
 	BYTE *op = (BYTE *) dest;
 
@@ -694,13 +677,7 @@ static int
 LZ4_compress64kCtx(void *ctx, const char *source, char *dest, int isize,
     int osize)
 {
-#if HEAPMODE
-	struct refTables *srt = (struct refTables *)ctx;
-	U16 *HashTable = (U16 *) (srt->hashTable);
-#else
-	U16 HashTable[HASH64KTABLESIZE] = { 0 };
-#endif
-
+	static U16 HashTable[HASH64KTABLESIZE];
 	const BYTE *ip = (BYTE *) source;
 	const BYTE *anchor = ip;
 	const BYTE *const base = ip;
@@ -708,6 +685,8 @@ LZ4_compress64kCtx(void *ctx, const char *source, char *dest, int isize,
 	const BYTE *const oend = (BYTE *) dest + osize;
 	const BYTE *const mflimit = iend - MFLIMIT;
 #define	matchlimit (iend - LASTLITERALS)
+
+	memset(HashTable, 0, sizeof(HashTable));
 
 	BYTE *op = (BYTE *) dest;
 
@@ -874,29 +853,9 @@ LZ4_compress64kCtx(void *ctx, const char *source, char *dest, int isize,
 static int
 real_LZ4_compress(const char *source, char *dest, int isize, int osize)
 {
-#if HEAPMODE
-	void *ctx = kmem_zalloc(sizeof (struct refTables), KM_NOSLEEP);
-	int result;
-
-	/*
-	 * out of kernel memory, gently fall through - this will disable
-	 * compression in zio_compress_data
-	 */
-	if (ctx == NULL)
-		return (0);
-
-	if (isize < LZ4_64KLIMIT)
-		result = LZ4_compress64kCtx(ctx, source, dest, isize, osize);
-	else
-		result = LZ4_compressCtx(ctx, source, dest, isize, osize);
-
-	kmem_free(ctx, sizeof (struct refTables));
-	return (result);
-#else
 	if (isize < (int)LZ4_64KLIMIT)
 		return (LZ4_compress64kCtx(NULL, source, dest, isize, osize));
 	return (LZ4_compressCtx(NULL, source, dest, isize, osize));
-#endif
 }
 
 /* Decompression functions */
