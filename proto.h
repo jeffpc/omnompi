@@ -5,7 +5,7 @@
 
 #define ARM_PAGESIZE	4096
 
-#define XFER_SIZE	(512 * 1024)
+#define XFER_SIZE	(1024 * 1024)
 
 enum cmd {
 	CMD_MEM_CLEAR = 1,
