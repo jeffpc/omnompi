@@ -15,12 +15,14 @@ clean:
 host: host.c
 	$(CC) $(CFLAGS) -o $@ $< /usr/lib/libavl.so.1
 
-tgt: tgt.c tgt_start.s bcm2835_uart.c
+tgt: tgt.c tgt_start.s bcm2835_uart.c tgt_support.c
 	$(ARMCC) -x assembler-with-cpp -c -o tgt_start.o tgt_start.s
 	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o tgt.o tgt.c
 	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o bcm2835_uart.o bcm2835_uart.c
+	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o tgt_support.o tgt_support.c
 	$(ARMLD) -dy -b -znointerp -o tgt.elf -e _start -M mapfile \
 		tgt_start.o \
 		tgt.o \
-		bcm2835_uart.o
+		bcm2835_uart.o \
+		tgt_support.o
 	$(ARMOBJCOPY) tgt.elf -O binary $@
