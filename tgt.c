@@ -1,11 +1,7 @@
 #include "bcm2835_uart.h"
 #include "tgt_support.h"
 #include "proto.h"
-
-#define	BSWAP_32(x)	(((uint32_t)(x) << 24) | \
-			(((uint32_t)(x) << 8) & 0xff0000) | \
-			(((uint32_t)(x) >> 8) & 0xff00) | \
-			((uint32_t)(x)  >> 24))
+#include "lz4.h"
 
 /* we only actually care about the first 14 regs */
 #define NUMREGS		14
@@ -91,25 +87,35 @@ enum cmd read_cmd()
 
 static void handle_mem_clear()
 {
-	struct xferclear buf;
+	struct xfermem xfer;
 
-	read(&buf, sizeof(buf));
+	read(&xfer, sizeof(xfer));
 
-	buf.addr = BSWAP_32(buf.addr);
-	buf.len  = BSWAP_32(buf.len);
+	xfer.addr = BSWAP_32(xfer.addr);
+	xfer.len  = BSWAP_32(xfer.len);
 
-	memset((void *)buf.addr, 0, buf.len);
+	memset((void *)xfer.addr, 0, xfer.len);
 }
 
 static void handle_mem_write()
 {
-	static struct xferbuf buf;
+	static struct xfermem xfer;
 
-	read(&buf, sizeof(buf));
+	read(&xfer, sizeof(xfer));
 
-	buf.addr = BSWAP_32(buf.addr);
+	xfer.addr = BSWAP_32(xfer.addr);
+	xfer.len  = BSWAP_32(xfer.len);
+	xfer.comp = BSWAP_32(xfer.comp);
 
-	memcpy((void *)buf.addr, buf.buf, sizeof(buf.buf));
+	if (!xfer.comp) {
+		read((void *)xfer.addr, xfer.len);
+	} else {
+		static uint8_t tmp[XFER_SIZE];
+
+		read(tmp, xfer.len);
+
+		lz4_decompress(tmp, (void *)xfer.addr, xfer.len, XFER_SIZE, 0);
+	}
 }
 
 static void handle_reg_write()

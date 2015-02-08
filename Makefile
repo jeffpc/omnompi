@@ -20,9 +20,11 @@ tgt: tgt.c tgt_start.s bcm2835_uart.c tgt_support.c
 	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o tgt.o tgt.c
 	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o bcm2835_uart.o bcm2835_uart.c
 	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o tgt_support.o tgt_support.c
+	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o lz4.o lz4.c
 	$(ARMLD) -dy -b -znointerp -o tgt.elf -e _start -M mapfile \
 		tgt_start.o \
 		tgt.o \
 		bcm2835_uart.o \
-		tgt_support.o
+		tgt_support.o \
+		lz4.o
 	$(ARMOBJCOPY) tgt.elf -O binary $@

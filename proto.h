@@ -5,7 +5,7 @@
 
 #define ARM_PAGESIZE	4096
 
-#define XFER_SIZE	4096
+#define XFER_SIZE	(512 * 1024)
 
 enum cmd {
 	CMD_MEM_CLEAR = 1,
@@ -17,14 +17,10 @@ enum cmd {
 	CMD_DONE,
 };
 
-struct xferclear {
+struct xfermem {
 	uint32_t addr;
 	uint32_t len;
-};
-
-struct xferbuf {
-	uint32_t addr;
-	uint8_t buf[XFER_SIZE];
+	uint32_t comp;
 };
 
 struct xferreg {

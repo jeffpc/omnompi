@@ -22,7 +22,6 @@
 #define TGT_ADDR	(200 * 1024 * 1024)
 #define TGT_LEN		(16 * 1024)
 
-uint32_t padded_bytes;
 uint32_t raw_bytes;
 uint32_t compressed_bytes;
 
@@ -207,60 +206,80 @@ static void checkstatus()
 	ASSERT(resp == '+');
 }
 
-static void mem_write(struct xferbuf *buf, uint32_t addr, uint32_t len)
+static void __mem_clear(uint32_t addr, uint32_t len)
 {
-	uint8_t tmp[XFER_SIZE];
-	struct xferclear clear;
-	uint32_t clen;
+	struct xfermem xfer;
 	enum cmd cmd;
-	int i;
-
-	for (i = 0; i < len; i++)
-		if (buf->buf[i])
-			goto copy;
 
 	/* cool, we can just send a mem-zeroing command */
 	fprintf(stderr, "  clear  of %u bytes at %#010x...", len, addr);
 
 	cmd = htonl(CMD_MEM_CLEAR);
-	clear.addr = htonl(addr);
-	clear.len  = htonl(len);
+	xfer.addr = htonl(addr);
+	xfer.len  = htonl(len);
+	xfer.comp = 0;
 
 	write(1, &cmd, sizeof(cmd));
-	write(1, &clear, sizeof(clear));
+	write(1, &xfer, sizeof(xfer));
 
 	checkstatus();
-	return;
+}
 
-copy:
-	fprintf(stderr, "  doxfer of %u bytes to %#010x...", len, addr);
+static void __mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
+{
+	uint8_t tmp[XFER_SIZE];
+	struct xfermem xfer;
+	bool compress;
+	uint32_t clen;
+	enum cmd cmd;
+
+	clen = lz4_compress(buf, tmp, len, XFER_SIZE, 0);
+
+	compress = (clen > len) ? false : true;
+
+	fprintf(stderr, "  doxfer of %u bytes to %#010x as %u bytes (%c)...",
+		len, addr, clen, compress ? 'C' : 'U');
 
 	cmd = htonl(CMD_MEM_WRITE);
-	buf->addr = htonl(addr);
+	xfer.addr = htonl(addr);
+	xfer.len  = htonl(compress ? clen : len);
+	xfer.comp = htonl(compress ? 1 : 0);
 
 	write(1, &cmd, sizeof(cmd));
-	write(1, buf, sizeof(*buf));
+	write(1, &xfer, sizeof(xfer));
+	write(1, compress ? tmp : buf, compress ? clen : len);
 
 	checkstatus();
 
-	padded_bytes += XFER_SIZE;
+	compressed_bytes += compress ? len : clen;
 	raw_bytes += len;
+}
 
-	clen = lz4_compress(buf->buf, tmp, len, XFER_SIZE, 0);
-	compressed_bytes += (clen > len) ? len : clen;
+static void mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
+{
+	int i;
+
+	for (i = 0; i < len; i++) {
+		if (buf[i]) {
+			__mem_write(buf, addr, len);
+			return;
+		}
+	}
+
+	__mem_clear(addr, len);
 }
 
 static void xfer(int fd, uint32_t addr, uint32_t off, uint32_t len)
 {
-	struct xferbuf buf;
+	uint8_t buf[XFER_SIZE];
 	ssize_t ret;
 	size_t x;
 
-	memset(buf.buf, 0, sizeof(buf.buf));
+	memset(buf, 0, sizeof(buf));
 
 	x = 0;
 	while (x != len) {
-		ret = pread(fd, &buf.buf[x], len - x, off + x);
+		ret = pread(fd, &buf[x], len - x, off + x);
 		if (!ret)
 			ASSERT(0);
 		if (ret == -1)
@@ -269,7 +288,7 @@ static void xfer(int fd, uint32_t addr, uint32_t off, uint32_t len)
 		x += ret;
 	}
 
-	mem_write(&buf, addr, len);
+	mem_write(buf, addr, len);
 }
 
 static void upload(const char *fname, uint32_t addr)
@@ -332,7 +351,6 @@ int main(int argc, char **argv)
 
 	done(KERNEL_ADDR);
 
-	fprintf(stderr, "padded bytes     %u\n", padded_bytes);
 	fprintf(stderr, "raw bytes        %u\n", raw_bytes);
 	fprintf(stderr, "compressed bytes %u\n", compressed_bytes);
 	fprintf(stderr, "ratio            %f\n", compressed_bytes / (float) raw_bytes);
