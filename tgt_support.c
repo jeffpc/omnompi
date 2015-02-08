@@ -2,9 +2,9 @@
 
 #include "tgt_support.h"
 
-void memcpy(void *dst, void *src, uint32_t len)
+void memcpy(void *dst, const void *src, uint32_t len)
 {
-	uint8_t *s = src;
+	const uint8_t *s = src;
 	uint8_t *d = dst;
 
 	while (len) {
