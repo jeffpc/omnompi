@@ -1,0 +1,4 @@
+*.o
+host
+tgt
+tgt.elf
