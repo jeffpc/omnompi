@@ -191,10 +191,10 @@ static void handle_done()
 
 void main(uint32_t r0, uint32_t r1, uint32_t r2)
 {
-	extern uint32_t _edata;
-	extern uint32_t _end;
+	extern uint8_t _edata;
+	extern uint8_t _end;
 
-	memset((void *)_edata, 0, _end - _edata);
+	memset(&_edata, 0, &_end - &_edata);
 
 	regs[0] = r0;
 	regs[1] = r1;
