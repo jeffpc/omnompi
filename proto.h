@@ -10,9 +10,7 @@
 enum cmd {
 	CMD_MEM_CLEAR = 1,
 	CMD_MEM_WRITE,
-#if 0
 	CMD_MEM_READ,
-#endif
 	CMD_REG_WRITE,
 	CMD_DONE,
 };

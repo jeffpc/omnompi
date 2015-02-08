@@ -118,6 +118,28 @@ static void handle_mem_write()
 	}
 }
 
+static void handle_mem_read()
+{
+	static struct xfermem xfer;
+	uint32_t addr, len;
+
+	read(&xfer, sizeof(xfer));
+
+	addr = BSWAP_32(xfer.addr);
+	len  = BSWAP_32(xfer.len);
+
+	send_ack();
+
+	xfer.addr = BSWAP_32(addr);
+	xfer.len  = BSWAP_32(len);
+	xfer.comp = 0;
+
+	write(&xfer, sizeof(xfer));
+	write((void *)addr, len);
+
+	send_ack();
+}
+
 static void handle_reg_write()
 {
 	static struct xferreg buf;
@@ -220,6 +242,9 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 				break;
 			case CMD_MEM_WRITE:
 				handle_mem_write();
+				break;
+			case CMD_MEM_READ:
+				handle_mem_read();
 				break;
 			case CMD_REG_WRITE:
 				handle_reg_write();
