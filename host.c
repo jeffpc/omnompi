@@ -21,6 +21,8 @@
 #define TGT_ADDR	(200 * 1024 * 1024)
 #define TGT_LEN		(16 * 1024)
 
+uint32_t padded_bytes;
+uint32_t raw_bytes;
 /*
  * Keeps track of free ranges of RAM
  */
@@ -235,6 +237,9 @@ copy:
 	write(1, buf, sizeof(*buf));
 
 	checkstatus();
+
+	padded_bytes += XFER_SIZE;
+	raw_bytes += len;
 }
 
 static void xfer(int fd, uint32_t addr, uint32_t off, uint32_t len)
@@ -319,5 +324,7 @@ int main(int argc, char **argv)
 
 	done(KERNEL_ADDR);
 
+	fprintf(stderr, "padded bytes     %u\n", padded_bytes);
+	fprintf(stderr, "raw bytes        %u\n", raw_bytes);
 	return 0;
 }
