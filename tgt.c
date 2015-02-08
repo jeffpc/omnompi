@@ -205,8 +205,6 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 	puts("Welcome to OmNom Raspberry Pi loader...\n");
 	puts("Ready to receive...\n");
 
-	print_regs(0);
-
 	for (;;) {
 		enum cmd cmd;
 
