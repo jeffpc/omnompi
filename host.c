@@ -251,7 +251,7 @@ static void __mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
 
 	checkstatus();
 
-	compressed_bytes += compress ? len : clen;
+	compressed_bytes += compress ? clen : len;
 	raw_bytes += len;
 }
 
