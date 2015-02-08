@@ -27,7 +27,7 @@ x:
  */
 
 	.data
-	.comm	stack, 4096, 32
+	.comm	stack, 20480, 32
 
 	_ENTRY(_start, .text.init)
 	ldr	sp, =stack
