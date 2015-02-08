@@ -153,7 +153,7 @@ static uint32_t alloc_addr(uint32_t addr, uint32_t len)
 	return addr;
 
 overlap:
-	fprintf(stderr, "Overlap detected when allocating %#08x.%x\n",
+	fprintf(stderr, "Overlap detected when allocating %#010x.%x\n",
 		addr, len);
 	ASSERT(0);
 	return ~0ul;
@@ -213,7 +213,7 @@ static void mem_write(struct xferbuf *buf, uint32_t addr, uint32_t len)
 			goto copy;
 
 	/* cool, we can just send a mem-zeroing command */
-	fprintf(stderr, "  clear  of %u bytes at %#08x...", len, addr);
+	fprintf(stderr, "  clear  of %u bytes at %#010x...", len, addr);
 
 	cmd = htonl(CMD_MEM_CLEAR);
 	clear.addr = htonl(addr);
@@ -226,7 +226,7 @@ static void mem_write(struct xferbuf *buf, uint32_t addr, uint32_t len)
 	return;
 
 copy:
-	fprintf(stderr, "  doxfer of %u bytes to %#08x...", len, addr);
+	fprintf(stderr, "  doxfer of %u bytes to %#010x...", len, addr);
 
 	cmd = htonl(CMD_MEM_WRITE);
 	buf->addr = htonl(addr);
@@ -277,7 +277,7 @@ static void upload(const char *fname, uint32_t addr)
 
 	addr = alloc_addr(addr, len);
 
-	fprintf(stderr, "%s @ %#08x is %u bytes\n", fname, addr, len);
+	fprintf(stderr, "%s @ %#010x is %u bytes\n", fname, addr, len);
 
 	for (off = 0; off < len; addr += XFER_SIZE, off += XFER_SIZE)
 		xfer(fd, addr, off,
@@ -294,7 +294,7 @@ static void done(uint32_t pc)
 {
 	enum cmd cmd;
 
-	fprintf(stderr, "Done.  Setting PC = %#08x...", pc);
+	fprintf(stderr, "Done.  Setting PC = %#010x...", pc);
 
 	cmd = htonl(CMD_DONE);
 	pc = htonl(pc);
