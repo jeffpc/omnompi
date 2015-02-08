@@ -198,6 +198,42 @@ static void usage(const char *prog)
 	exit(1);
 }
 
+static void fullread(int fd, void *buf, uint32_t len)
+{
+	uint8_t *ptr = buf;
+	ssize_t ret;
+	size_t x;
+
+	x = 0;
+	while (x != len) {
+		ret = read(fd, &ptr[x], len - x);
+		if (!ret)
+			ASSERT(0);
+		if (ret == -1)
+			ASSERT(0);
+
+		x += ret;
+	}
+}
+
+static void fullwrite(int fd, void *buf, uint32_t len)
+{
+	uint8_t *ptr = buf;
+	ssize_t ret;
+	size_t x;
+
+	x = 0;
+	while (x != len) {
+		ret = write(fd, &ptr[x], len - x);
+		if (!ret)
+			ASSERT(0);
+		if (ret == -1)
+			ASSERT(0);
+
+		x += ret;
+	}
+}
+
 static void checkstatus()
 {
 	char resp;
@@ -221,8 +257,8 @@ static void __mem_clear(uint32_t addr, uint32_t len)
 	xfer.len  = htonl(len);
 	xfer.comp = 0;
 
-	write(1, &cmd, sizeof(cmd));
-	write(1, &xfer, sizeof(xfer));
+	fullwrite(1, &cmd, sizeof(cmd));
+	fullwrite(1, &xfer, sizeof(xfer));
 
 	checkstatus();
 
@@ -249,9 +285,9 @@ static void __mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
 	xfer.len  = htonl(compress ? clen : len);
 	xfer.comp = htonl(compress ? 1 : 0);
 
-	write(1, &cmd, sizeof(cmd));
-	write(1, &xfer, sizeof(xfer));
-	write(1, compress ? tmp : buf, compress ? clen : len);
+	fullwrite(1, &cmd, sizeof(cmd));
+	fullwrite(1, &xfer, sizeof(xfer));
+	fullwrite(1, compress ? tmp : buf, compress ? clen : len);
 
 	checkstatus();
 
@@ -271,24 +307,6 @@ static void mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
 	}
 
 	__mem_clear(addr, len);
-}
-
-static void fullread(int fd, void *buf, uint32_t len)
-{
-	uint8_t *ptr = buf;
-	ssize_t ret;
-	size_t x;
-
-	x = 0;
-	while (x != len) {
-		ret = read(fd, &ptr[x], len - x);
-		if (!ret)
-			ASSERT(0);
-		if (ret == -1)
-			ASSERT(0);
-
-		x += ret;
-	}
 }
 
 static void xfer(int fd, uint32_t addr, uint32_t off, uint32_t len)
@@ -357,8 +375,8 @@ static uint32_t read_mem(uint8_t *buf, uint32_t addr, uint32_t len)
 	xfer.len  = htonl(len);
 	xfer.comp = 0;
 
-	write(1, &cmd, sizeof(cmd));
-	write(1, &xfer, sizeof(xfer));
+	fullwrite(1, &cmd, sizeof(cmd));
+	fullwrite(1, &xfer, sizeof(xfer));
 
 	checkstatus();
 
@@ -415,8 +433,8 @@ static void done(uint32_t pc)
 	cmd = htonl(CMD_DONE);
 	pc = htonl(pc);
 
-	write(1, &cmd, sizeof(cmd));
-	write(1, &pc, sizeof(pc));
+	fullwrite(1, &cmd, sizeof(cmd));
+	fullwrite(1, &pc, sizeof(pc));
 
 	checkstatus();
 }
