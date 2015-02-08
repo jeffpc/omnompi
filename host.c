@@ -17,11 +17,12 @@
 #include "lz4.h"
 #include "atag.h"
 
-#define	KERNEL_ADDR	0x8000ul
+#define	KERNEL_ADDR	0x00008000ul
+#define INITRD_ADDR	0x00800000ul
 #define RANDOM_ADDR	~0ul
 
 #define TGT_ADDR	(200 * 1024 * 1024)
-#define TGT_LEN		(16 * 1024)
+#define TGT_LEN		(2 * 1024 * 1024)
 
 uint32_t raw_bytes;
 uint32_t compressed_bytes;
@@ -449,7 +450,7 @@ int main(int argc, char **argv)
 	setup_ramranges();
 
 	upload(argv[1], KERNEL_ADDR, NULL, NULL);
-	upload(argv[2], RANDOM_ADDR, &initrd_addr, &initrd_len);
+	upload(argv[2], INITRD_ADDR, &initrd_addr, &initrd_len);
 
 	tweak_atags(initrd_addr, initrd_len);
 
