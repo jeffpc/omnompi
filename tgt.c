@@ -30,7 +30,7 @@ puthex(uint32_t v)
 	buf[1] = 'x';
 	buf[10] = '\0';
 
-	for (i = 8; i >= 0; i--) {
+	for (i = 7; i >= 0; i--) {
 		c = v & 0xf;
 		v >>= 4;
 
