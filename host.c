@@ -254,6 +254,7 @@ static struct deduprec *dedupfind(uint8_t *buf, uint32_t len)
 static void dedupadd(uint8_t *buf, uint32_t addr, uint32_t len)
 {
 	struct deduprec *v;
+	avl_index_t where;
 
 	v = malloc(sizeof(struct deduprec));
 	ASSERT(v);
@@ -262,7 +263,10 @@ static void dedupadd(uint8_t *buf, uint32_t addr, uint32_t len)
 	v->len  = len;
 	SHA1(buf, len, v->cksum);
 
-	avl_add(&ddt, v);
+	if (avl_find(&ddt, v, &where))
+		free(v);
+	else
+		avl_insert(&ddt, v, where);
 }
 
 static void usage(const char *prog)
@@ -398,12 +402,11 @@ static void mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
 	for (i = 0; i < len; i++) {
 		if (buf[i]) {
 			ddr = dedupfind(buf, len);
-			if (ddr) {
+			if (!ddr || (ddr->addr > (addr - XFER_SIZE))) {
+				__mem_write(buf, addr, len);
+			} else {
 				ASSERT(ddr->len == len);
 				__mem_copy(addr, ddr->addr, len);
-			} else {
-				dedupadd(buf, addr, len);
-				__mem_write(buf, addr, len);
 			}
 			return;
 		}
@@ -443,8 +446,18 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 
 	fprintf(stderr, "%s @ %#010x is %u bytes\n", fname, addr, len);
 
-	for (off = 0; off < len; addr += XFER_SIZE, off += XFER_SIZE)
-		mem_write(mappedfile + off, addr, MIN(XFER_SIZE, len - off));
+	/*
+	 * prepare dedup table
+	 */
+	for (off = 0; off < len - XFER_SIZE; off++)
+		dedupadd(mappedfile + off, addr + off, XFER_SIZE);
+
+	/*
+	 * upload the file
+	 */
+	for (off = 0; off < len; off += XFER_SIZE)
+		mem_write(mappedfile + off, addr + off,
+			  MIN(XFER_SIZE, len - off));
 
 	munmap((void *)mappedfile, statinfo.st_size);
 	close(fd);
