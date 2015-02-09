@@ -370,7 +370,7 @@ static void __mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
 
 	clen = lz4_compress(buf, tmp, len, XFER_SIZE, 0);
 
-	compress = (clen > len) ? false : true;
+	compress = (clen >= len) ? false : true;
 
 	fprintf(stderr, "  doxfer of %u bytes to %#010x as %u bytes (%c)...",
 		len, addr, clen, compress ? 'C' : 'U');
