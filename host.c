@@ -358,8 +358,7 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 	fprintf(stderr, "%s @ %#010x is %u bytes\n", fname, addr, len);
 
 	for (off = 0; off < len; addr += XFER_SIZE, off += XFER_SIZE)
-		xfer(fd, addr, off,
-		     ((len - off) >= XFER_SIZE) ? XFER_SIZE : (len - off));
+		xfer(fd, addr, off, MIN(XFER_SIZE, len - off));
 
 	close(fd);
 }
