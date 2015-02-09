@@ -10,6 +10,7 @@
 #include <sys/avl.h>
 #include <sys/debug.h>
 #include <sys/sysmacros.h>
+#include <sys/mman.h>
 #include <inttypes.h>
 #include <netinet/in.h>
 
@@ -310,30 +311,9 @@ static void mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
 	__mem_clear(addr, len);
 }
 
-static void xfer(int fd, uint32_t addr, uint32_t off, uint32_t len)
-{
-	uint8_t buf[XFER_SIZE];
-	ssize_t ret;
-	size_t x;
-
-	memset(buf, 0, sizeof(buf));
-
-	x = 0;
-	while (x != len) {
-		ret = pread(fd, &buf[x], len - x, off + x);
-		if (!ret)
-			ASSERT(0);
-		if (ret == -1)
-			ASSERT(0);
-
-		x += ret;
-	}
-
-	mem_write(buf, addr, len);
-}
-
 static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *rlen)
 {
+	uint8_t *mappedfile;
 	struct stat statinfo;
 	uint32_t len;
 	uint32_t off;
@@ -345,6 +325,9 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 
 	ret = fstat(fd, &statinfo);
 	ASSERT(ret == 0);
+
+	mappedfile = (void *)mmap(NULL, statinfo.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	ASSERT(mappedfile != MAP_FAILED);
 
 	len = statinfo.st_size;
 
@@ -358,8 +341,9 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 	fprintf(stderr, "%s @ %#010x is %u bytes\n", fname, addr, len);
 
 	for (off = 0; off < len; addr += XFER_SIZE, off += XFER_SIZE)
-		xfer(fd, addr, off, MIN(XFER_SIZE, len - off));
+		mem_write(mappedfile + off, addr, MIN(XFER_SIZE, len - off));
 
+	munmap((void *)mappedfile, statinfo.st_size);
 	close(fd);
 }
 
