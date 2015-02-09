@@ -234,6 +234,9 @@ static void dedupclear()
 	void *cookie;
 	struct deduprec *node;
 
+	fprintf(stderr, "about to remove %lu ddt entries\n",
+		avl_numnodes(&ddt));
+
 	cookie = NULL;
 	while ((node = avl_destroy_nodes(&ddt, &cookie)))
 		free(node);
