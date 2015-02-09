@@ -97,6 +97,19 @@ static void handle_mem_clear()
 	memset((void *)xfer.addr, 0, xfer.len);
 }
 
+static void handle_mem_copy()
+{
+	struct xfermemcpy xfer;
+
+	read(&xfer, sizeof(xfer));
+
+	xfer.dst = BSWAP_32(xfer.dst);
+	xfer.src = BSWAP_32(xfer.src);
+	xfer.len = BSWAP_32(xfer.len);
+
+	memcpy((void *)xfer.dst, (void *)xfer.src, xfer.len);
+}
+
 static void handle_mem_write()
 {
 	static struct xfermem xfer;
@@ -243,6 +256,9 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 				break;
 			case CMD_MEM_READ:
 				handle_mem_read();
+				break;
+			case CMD_MEM_COPY:
+				handle_mem_copy();
 				break;
 			case CMD_REG_WRITE:
 				handle_reg_write();

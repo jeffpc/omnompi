@@ -13,6 +13,7 @@
 #include <sys/mman.h>
 #include <inttypes.h>
 #include <netinet/in.h>
+#include <openssl/sha.h>
 
 #include "proto.h"
 #include "lz4.h"
@@ -27,7 +28,8 @@
 
 uint32_t raw_bytes;
 uint32_t compressed_bytes;
-uint32_t skipped_bytes;
+uint32_t zeroed_bytes;
+uint32_t copied_bytes;
 
 /*
  * Keeps track of free ranges of RAM
@@ -194,6 +196,75 @@ static void setup_ramranges()
 	alloc_addr(0, 0x8000);
 }
 
+/*
+ * Keeps track of duplicate blocks
+ */
+static avl_tree_t ddt;
+
+struct deduprec {
+	avl_node_t tree;
+	uint32_t addr;
+	uint32_t len;
+	uint8_t cksum[SHA_DIGEST_LENGTH];
+};
+
+static int dedupcmp(const void *va, const void *vb)
+{
+	const struct deduprec *a = va;
+	const struct deduprec *b = vb;
+	int ret;
+
+	ret = memcmp(a->cksum, b->cksum, sizeof(a->cksum));
+
+	if (ret < 0)
+		return -1;
+	if (ret > 0)
+		return 1;
+	return 0;
+}
+
+static void dedupinit()
+{
+	avl_create(&ddt, dedupcmp, sizeof(struct deduprec),
+		   offsetof(struct deduprec, tree));
+}
+
+static void dedupclear()
+{
+	void *cookie;
+	struct deduprec *node;
+
+	cookie = NULL;
+	while ((node = avl_destroy_nodes(&ddt, &cookie)))
+		free(node);
+	avl_destroy(&ddt);
+
+	dedupinit();
+}
+
+static struct deduprec *dedupfind(uint8_t *buf, uint32_t len)
+{
+	struct deduprec key;
+
+	SHA1(buf, len, key.cksum);
+
+	return avl_find(&ddt, &key, NULL);
+}
+
+static void dedupadd(uint8_t *buf, uint32_t addr, uint32_t len)
+{
+	struct deduprec *v;
+
+	v = malloc(sizeof(struct deduprec));
+	ASSERT(v);
+
+	v->addr = addr;
+	v->len  = len;
+	SHA1(buf, len, v->cksum);
+
+	avl_add(&ddt, v);
+}
+
 static void usage(const char *prog)
 {
 	fprintf(stderr, "%s <kernel> <initrd>\n", prog);
@@ -264,7 +335,29 @@ static void __mem_clear(uint32_t addr, uint32_t len)
 
 	checkstatus();
 
-	skipped_bytes += len;
+	zeroed_bytes += len;
+}
+
+static void __mem_copy(uint32_t dst, uint32_t src, uint32_t len)
+{
+	struct xfermemcpy xfer;
+	enum cmd cmd;
+
+	/* cool, we can just send a mem-copying command */
+	fprintf(stderr, "  copy   of %u bytes at %#010x from %#010x...",
+		len, dst, src);
+
+	cmd = htonl(CMD_MEM_COPY);
+	xfer.dst = htonl(dst);
+	xfer.src = htonl(src);
+	xfer.len = htonl(len);
+
+	fullwrite(1, &cmd, sizeof(cmd));
+	fullwrite(1, &xfer, sizeof(xfer));
+
+	checkstatus();
+
+	copied_bytes += len;
 }
 
 static void __mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
@@ -299,11 +392,19 @@ static void __mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
 
 static void mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
 {
+	struct deduprec *ddr;
 	int i;
 
 	for (i = 0; i < len; i++) {
 		if (buf[i]) {
-			__mem_write(buf, addr, len);
+			ddr = dedupfind(buf, len);
+			if (ddr) {
+				ASSERT(ddr->len == len);
+				__mem_copy(addr, ddr->addr, len);
+			} else {
+				dedupadd(buf, addr, len);
+				__mem_write(buf, addr, len);
+			}
 			return;
 		}
 	}
@@ -319,6 +420,8 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 	uint32_t off;
 	int ret;
 	int fd;
+
+	ASSERT(avl_numnodes(&ddt) == 0);
 
 	fd = open(fname, O_RDONLY);
 	ASSERT(fd >= 0);
@@ -345,6 +448,8 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 
 	munmap((void *)mappedfile, statinfo.st_size);
 	close(fd);
+
+	dedupclear();
 }
 
 static uint32_t read_mem(uint8_t *buf, uint32_t addr, uint32_t len)
@@ -425,11 +530,14 @@ static void done(uint32_t pc)
 
 int main(int argc, char **argv)
 {
+	uint32_t skipped_bytes;
+	uint32_t total_bytes;
 	uint32_t initrd_addr, initrd_len;
 
 	if (argc != 3)
 		usage(argv[0]);
 
+	dedupinit();
 	setup_ramranges();
 
 	upload(argv[1], KERNEL_ADDR, NULL, NULL);
@@ -439,11 +547,16 @@ int main(int argc, char **argv)
 
 	done(KERNEL_ADDR);
 
-	fprintf(stderr, "raw bytes        %u\n", raw_bytes);
-	fprintf(stderr, "skipped bytes    %u\n", skipped_bytes);
-	fprintf(stderr, "compressed bytes %u\n", compressed_bytes);
-	fprintf(stderr, "ratio            %f\n", compressed_bytes / (float) raw_bytes);
-	fprintf(stderr, "total ratio      %f\n", compressed_bytes / (float) (skipped_bytes + raw_bytes));
+	skipped_bytes = zeroed_bytes + copied_bytes;
+	total_bytes = skipped_bytes + raw_bytes;
+
+#define P(x)	((x) / (float) total_bytes)
+
+	fprintf(stderr, "total bytes      %8u\n", total_bytes);
+	fprintf(stderr, "zeroed bytes     %8u %f\n", zeroed_bytes, P(zeroed_bytes));
+	fprintf(stderr, "copied bytes     %8u %f\n", copied_bytes, P(copied_bytes));
+	fprintf(stderr, "raw bytes        %8u %f\n", raw_bytes, P(raw_bytes));
+	fprintf(stderr, "compressed bytes %8u %f\n", compressed_bytes, P(compressed_bytes));
 
 	return 0;
 }

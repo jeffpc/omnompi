@@ -13,7 +13,7 @@ clean:
 	rm -f host tgt
 
 host: host.c lz4.c atag.c
-	$(CC) $(CFLAGS) -o $@ $^ /usr/lib/libavl.so.1
+	$(CC) $(CFLAGS) -lcrypto -o $@ $^ /usr/lib/libavl.so.1
 
 tgt: tgt.c tgt_start.s bcm2835_uart.c tgt_support.c
 	$(ARMCC) -x assembler-with-cpp -c -o tgt_start.o tgt_start.s
