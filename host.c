@@ -24,13 +24,12 @@
 #define INITRD_ADDR	0x00800000ul
 #define RANDOM_ADDR	~0ul
 
-#define TGT_ADDR	(200 * 1024 * 1024)
-#define TGT_LEN		(2 * 1024 * 1024)
-
 #define MXINIT(x)	ASSERT(pthread_mutex_init((x), NULL) == 0)
 #define MXDESTROY(x)	ASSERT(pthread_mutex_destroy(x) == 0)
 #define MXLOCK(x)	ASSERT(pthread_mutex_lock(x) == 0)
 #define MXUNLOCK(x)	ASSERT(pthread_mutex_unlock(x) == 0)
+
+static void get_tgt_addr(uint32_t *addr, uint32_t *len);
 
 uint32_t raw_bytes;
 uint32_t compressed_bytes;
@@ -177,6 +176,7 @@ overlap:
 
 static void setup_ramranges()
 {
+	uint32_t tgt_addr, tgt_len;
 	struct ramrange *r;
 
 	avl_create(&rr, rrcmp, sizeof(struct ramrange),
@@ -193,7 +193,8 @@ static void setup_ramranges()
 	 * "allocate" what our target binary uses so we don't accidentally
 	 * overwrite ourselves
 	 */
-	alloc_addr(TGT_ADDR, TGT_LEN);
+	get_tgt_addr(&tgt_addr, &tgt_len);
+	alloc_addr(tgt_addr, P2ROUNDUP(tgt_len, ARM_PAGESIZE));
 
 	/*
 	 * "allocate" the first 32kB because that's where we end up with
@@ -436,6 +437,31 @@ static void mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
 	}
 
 	__mem_clear(addr, len);
+}
+
+static void get_tgt_addr(uint32_t *addr, uint32_t *len)
+{
+	struct xfermem xfer;
+	enum cmd cmd;
+
+	fprintf(stderr, "Requesting target address map...");
+
+	cmd = htonl(CMD_TGT_ADDR);
+
+	fullwrite(1, &cmd, sizeof(cmd));
+
+	checkstatus();
+
+	fprintf(stderr, "Reading header...");
+
+	fullread(0, &xfer, sizeof(xfer));
+
+	checkstatus();
+
+	ASSERT(ntohl(xfer.comp) == 0);
+
+	*addr = ntohl(xfer.addr);
+	*len  = ntohl(xfer.len);
 }
 
 #define NHELPERS	7

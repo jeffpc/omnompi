@@ -151,6 +151,21 @@ static void handle_mem_read()
 	write((void *)addr, len);
 }
 
+static void handle_tgt_addr()
+{
+	static struct xfermem xfer;
+	extern uint8_t _start;
+	extern uint8_t _end;
+
+	send_ack();
+
+	xfer.addr = BSWAP_32((uintptr_t)&_start);
+	xfer.len  = BSWAP_32(&_end - &_start);
+	xfer.comp = 0;
+
+	write(&xfer, sizeof(xfer));
+}
+
 static void handle_reg_write()
 {
 	static struct xferreg buf;
@@ -259,6 +274,9 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 				break;
 			case CMD_MEM_COPY:
 				handle_mem_copy();
+				break;
+			case CMD_TGT_ADDR:
+				handle_tgt_addr();
 				break;
 			case CMD_REG_WRITE:
 				handle_reg_write();
