@@ -14,6 +14,7 @@
 #include <inttypes.h>
 #include <netinet/in.h>
 #include <openssl/sha.h>
+#include <pthread.h>
 
 #include "proto.h"
 #include "lz4.h"
@@ -25,6 +26,11 @@
 
 #define TGT_ADDR	(200 * 1024 * 1024)
 #define TGT_LEN		(2 * 1024 * 1024)
+
+#define MXINIT(x)	ASSERT(pthread_mutex_init((x), NULL) == 0)
+#define MXDESTROY(x)	ASSERT(pthread_mutex_destroy(x) == 0)
+#define MXLOCK(x)	ASSERT(pthread_mutex_lock(x) == 0)
+#define MXUNLOCK(x)	ASSERT(pthread_mutex_unlock(x) == 0)
 
 uint32_t raw_bytes;
 uint32_t compressed_bytes;
@@ -200,6 +206,7 @@ static void setup_ramranges()
  * Keeps track of duplicate blocks
  */
 static avl_tree_t ddt;
+static pthread_mutex_t ddtlock;
 
 struct deduprec {
 	avl_node_t tree;
@@ -225,6 +232,7 @@ static int dedupcmp(const void *va, const void *vb)
 
 static void dedupinit()
 {
+	MXINIT(&ddtlock);
 	avl_create(&ddt, dedupcmp, sizeof(struct deduprec),
 		   offsetof(struct deduprec, tree));
 }
@@ -237,10 +245,15 @@ static void dedupclear()
 	fprintf(stderr, "about to remove %lu ddt entries\n",
 		avl_numnodes(&ddt));
 
+	MXLOCK(&ddtlock);
+
 	cookie = NULL;
 	while ((node = avl_destroy_nodes(&ddt, &cookie)))
 		free(node);
 	avl_destroy(&ddt);
+
+	MXUNLOCK(&ddtlock);
+	MXDESTROY(&ddtlock);
 
 	dedupinit();
 }
@@ -248,10 +261,15 @@ static void dedupclear()
 static struct deduprec *dedupfind(uint8_t *buf, uint32_t len)
 {
 	struct deduprec key;
+	struct deduprec *ret;
 
 	SHA1(buf, len, key.cksum);
 
-	return avl_find(&ddt, &key, NULL);
+	MXLOCK(&ddtlock);
+	ret = avl_find(&ddt, &key, NULL);
+	MXUNLOCK(&ddtlock);
+
+	return ret;
 }
 
 static void dedupadd(uint8_t *buf, uint32_t addr, uint32_t len)
@@ -266,10 +284,12 @@ static void dedupadd(uint8_t *buf, uint32_t addr, uint32_t len)
 	v->len  = len;
 	SHA1(buf, len, v->cksum);
 
+	MXLOCK(&ddtlock);
 	if (avl_find(&ddt, v, &where))
 		free(v);
 	else
 		avl_insert(&ddt, v, where);
+	MXUNLOCK(&ddtlock);
 }
 
 static void usage(const char *prog)
@@ -418,14 +438,38 @@ static void mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
 	__mem_clear(addr, len);
 }
 
+#define NHELPERS	7
+
+struct helperargs {
+	uint8_t *buf;
+	uint32_t len;
+	uint32_t addr;
+	uint32_t offset;
+};
+
+static void *populateddt(void *p)
+{
+	struct helperargs *args = p;
+	uint32_t off;
+
+	for (off = args->offset; off + XFER_SIZE < args->len; off += NHELPERS)
+		dedupadd(args->buf + off, args->addr + off, XFER_SIZE);
+
+	free(args);
+
+	return NULL;
+}
+
 static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *rlen)
 {
+	pthread_t helpers[NHELPERS];
 	uint8_t *mappedfile;
 	struct stat statinfo;
 	uint32_t len;
 	uint32_t off;
 	int ret;
 	int fd;
+	int i;
 
 	ASSERT(avl_numnodes(&ddt) == 0);
 
@@ -452,8 +496,20 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 	/*
 	 * prepare dedup table
 	 */
-	for (off = 0; off < len - XFER_SIZE; off++)
-		dedupadd(mappedfile + off, addr + off, XFER_SIZE);
+	for (i = 0; i < NHELPERS; i++) {
+		struct helperargs *args;
+
+		args = malloc(sizeof(struct helperargs));
+		ASSERT(args);
+
+		args->buf = mappedfile;
+		args->len = len;
+		args->addr = addr;
+		args->offset = i;
+
+		ret = pthread_create(&helpers[i], NULL, populateddt, args);
+		ASSERT(ret == 0);
+	}
 
 	/*
 	 * upload the file
@@ -461,6 +517,14 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 	for (off = 0; off < len; off += XFER_SIZE)
 		mem_write(mappedfile + off, addr + off,
 			  MIN(XFER_SIZE, len - off));
+
+	/*
+	 * wait for helpers to terminate
+	 */
+	for (i = 0; i < NHELPERS; i++) {
+		ret = pthread_join(helpers[i], NULL);
+		ASSERT(ret == 0);
+	}
 
 	munmap((void *)mappedfile, statinfo.st_size);
 	close(fd);
