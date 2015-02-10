@@ -514,11 +514,6 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 
 	addr = alloc_addr(addr, len);
 
-	if (raddr)
-		*raddr = addr;
-	if (rlen)
-		*rlen = len;
-
 	fprintf(stderr, "%s @ %#010x is %u bytes\n", fname, addr, len);
 
 	/*
@@ -558,6 +553,11 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 	close(fd);
 
 	dedupclear();
+
+	if (raddr)
+		*raddr = addr;
+	if (rlen)
+		*rlen = len;
 }
 
 static uint32_t read_mem(uint8_t *buf, uint32_t addr, uint32_t len)
