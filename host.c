@@ -420,7 +420,8 @@ static void __mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
 	raw_bytes += len;
 }
 
-static void mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
+static void mem_write(uint8_t *buf, uint32_t addr, uint32_t len,
+		      bool clear)
 {
 	struct deduprec *ddr;
 	int i;
@@ -438,7 +439,8 @@ static void mem_write(uint8_t *buf, uint32_t addr, uint32_t len)
 		}
 	}
 
-	__mem_clear(addr, len);
+	if (clear)
+		__mem_clear(addr, len);
 }
 
 static void get_tgt_addr(uint32_t *addr, uint32_t *len)
@@ -535,11 +537,17 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 	}
 
 	/*
+	 * pre-clear the target address range
+	 */
+	__mem_clear(addr, len);
+
+	/*
 	 * upload the file
 	 */
 	for (off = 0; off < len; off += XFER_SIZE)
 		mem_write(mappedfile + off, addr + off,
-			  MIN(XFER_SIZE, len - off));
+			  MIN(XFER_SIZE, len - off),
+			  false);
 
 	/*
 	 * wait for helpers to terminate
@@ -618,7 +626,7 @@ static void tweak_atags(uint32_t initrd_addr, uint32_t initrd_len)
 	atag_append((atag_header_t *)&buf[0x100], &atag.ai_header);
 
 	fprintf(stderr, "Writing out updated first %dkB\n", sizeof(buf) / 1024);
-	mem_write(buf, 0, sizeof(buf));
+	mem_write(buf, 0, sizeof(buf), true);
 }
 
 static void done(uint32_t pc)
