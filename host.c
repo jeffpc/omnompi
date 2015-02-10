@@ -126,6 +126,8 @@ static uint32_t alloc_addr(uint32_t addr, uint32_t len)
 	if ((rstart > start) || (rend < end))
 		goto overlap;
 
+	fprintf(stderr, "Allocating %#010x.%x\n", addr, len);
+
 	/*
 	 * now, depending on the range we got, we need to treat it a bit
 	 * differently
