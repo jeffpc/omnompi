@@ -18,6 +18,7 @@ host: host.c lz4.c atag.c
 tgt: tgt.c tgt_start.s bcm2835_uart.c tgt_support.c
 	$(ARMCC) -x assembler-with-cpp -c -o tgt_start.o tgt_start.s
 	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o tgt.o tgt.c
+	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o atag.o atag.c
 	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o bcm2835_uart.o bcm2835_uart.c
 	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o tgt_support.o tgt_support.c
 	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o lz4.o lz4.c
@@ -26,5 +27,6 @@ tgt: tgt.c tgt_start.s bcm2835_uart.c tgt_support.c
 		tgt.o \
 		bcm2835_uart.o \
 		tgt_support.o \
-		lz4.o
+		lz4.o \
+		atag.o
 	$(ARMOBJCOPY) tgt.elf -O binary $@

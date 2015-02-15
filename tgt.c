@@ -2,6 +2,7 @@
 #include "tgt_support.h"
 #include "proto.h"
 #include "lz4.h"
+#include "atag.h"
 
 /* we only actually care about the first 14 regs */
 #define NUMREGS		14
@@ -243,8 +244,30 @@ static void handle_done()
 	execute(regs, pc);
 }
 
+static char *
+get_atag_cmdline(atag_header_t *chain)
+{
+	static char buf[512];
+	atag_cmdline_t *cmd;
+	uint32_t len;
+
+	cmd = (atag_cmdline_t *)atag_find(chain, ATAG_CMDLINE);
+	if (!cmd)
+		return NULL;
+
+	len = cmd->al_header.ah_size * sizeof(uint32_t);
+	if (len >= sizeof(buf))
+		return NULL; /* sadly, we can't print anything at this point */
+
+	memcpy(buf, cmd->al_cmdline, len);
+	buf[len] = '\0';
+
+	return buf;
+}
+
 void main(uint32_t r0, uint32_t r1, uint32_t r2)
 {
+	char *cmdline;
 	extern uint8_t _edata;
 	extern uint8_t _end;
 
@@ -254,9 +277,16 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 	regs[1] = r1;
 	regs[2] = r2;
 
+	cmdline = get_atag_cmdline((atag_header_t *)r1);
+
 	bcm2835_uart_init();
 
 	puts("Welcome to OmNom Raspberry Pi loader...\n");
+	if (cmdline) {
+		puts("ATAG_CMDLINE:\n");
+		puts(cmdline);
+		puts("\n");
+	}
 	puts("Ready to receive...\n");
 
 	for (;;) {
