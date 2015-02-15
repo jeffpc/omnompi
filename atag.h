@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#include <sys/types.h>
+#include <inttypes.h>
 
 #define	ATAG_NONE	0x0
 #define	ATAG_CORE	0x54410001
@@ -115,7 +115,7 @@ typedef struct atag_illumos_mapping {
 extern atag_header_t *atag_next(atag_header_t *);
 extern const atag_header_t *atag_find(atag_header_t *, uint32_t);
 extern void atag_append(atag_header_t *, atag_header_t *);
-extern size_t atag_length(atag_header_t *);
+extern uint32_t atag_length(atag_header_t *);
 
 #ifdef __cplusplus
 }

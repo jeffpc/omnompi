@@ -75,7 +75,7 @@ atag_append(atag_header_t *chain, atag_header_t *val)
 	chain->ah_tag = hdr.ah_tag;
 }
 
-size_t
+uint32_t
 atag_length(atag_header_t *chain)
 {
 	size_t len = 0;
