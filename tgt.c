@@ -281,7 +281,7 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 
 	bcm2835_uart_init();
 
-	puts("Welcome to OmNom Raspberry Pi loader...\n");
+	puts("Welcome to OmNom Raspberry Pi loader " VERSION "...\n");
 	if (cmdline) {
 		puts("ATAG_CMDLINE:\n");
 		puts(cmdline);
