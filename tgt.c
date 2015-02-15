@@ -277,7 +277,7 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 	regs[1] = r1;
 	regs[2] = r2;
 
-	cmdline = get_atag_cmdline((atag_header_t *)r1);
+	cmdline = get_atag_cmdline((atag_header_t *)r2);
 
 	bcm2835_uart_init(cmdline);
 
