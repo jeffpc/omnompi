@@ -47,8 +47,9 @@
 #define	UART_CR_TXE		0x100		/* TX enable */
 #define	UART_CR_RXE		0x200		/* RX enable */
 
-#define UART_CLK	3000000
-#define UART_RATE	115200
+#define	UART_CLK_STRING		"bcm2708.uart_clock="
+#define UART_DEFAULT_CLK	3000000
+#define UART_RATE		115200
 
 
 /*
@@ -77,6 +78,30 @@ bcm2835_uart_nop(void)
 	__asm__ volatile("mov r0, r0\n" : : :);
 }
 
+static uint32_t
+bcm2835_uart_get_clk(const char *cmdline)
+{
+	uint32_t clk;
+	char *tmp;
+
+	if (!cmdline)
+		return UART_DEFAULT_CLK;
+
+	tmp = strstr(cmdline, UART_CLK_STRING);
+	if (!tmp)
+		return UART_DEFAULT_CLK;
+
+	tmp += strlen(UART_CLK_STRING);
+
+	clk = 0;
+	while ((*tmp >= '0') && (*tmp <= '9')) {
+		clk = (clk * 10) + (*tmp - '0');
+		tmp++;
+	}
+
+	return clk ? clk : UART_DEFAULT_CLK;
+}
+
 /*
  * uartclk / (16 * bps) = rate
  * IBRD = (int) rate
@@ -88,15 +113,17 @@ bcm2835_uart_nop(void)
  * the integer part worth, add one (this is 1/128 of the actual rate, which
  * is 0.5 of 1/64), and then divide by 2.
  *
- * It is safe for us to mulitply the rate by 128 since the clock normally
- * runs at 3 MHz (384 MHz still fits into a 32-bit register).
+ * It is safe for us to mulitply the rate by 128 since all clock frequencies
+ * up to 384 MHz fit into a 32-bit register and the default is 3MHz.
  */
 static void
-bcm2835_uart_set_baud_rate()
+bcm2835_uart_set_baud_rate(const char *cmdline)
 {
-	uint32_t clk = UART_CLK * 128;
+	uint32_t clk;
 	uint32_t rate;
 	uint32_t i, f;
+
+	clk = 128 * bcm2835_uart_get_clk(cmdline);
 
 	rate = clk / (16 * UART_RATE);
 	i = rate / 128;
@@ -107,7 +134,7 @@ bcm2835_uart_set_baud_rate()
 }
 
 void
-bcm2835_uart_init(void)
+bcm2835_uart_init(const char *cmdline)
 {
 	uint32_t v;
 	int i;
@@ -134,7 +161,7 @@ bcm2835_uart_init(void)
 	arm_reg_write(UART_BASE + UART_ICR, 0x7ff);
 
 	/* set the baud rate */
-	bcm2835_uart_set_baud_rate();
+	bcm2835_uart_set_baud_rate(cmdline);
 
 	/* select 8-bit, enable FIFOs */
 	arm_reg_write(UART_BASE + UART_LCRH, UART_LCRH_WLEN_8 | UART_LCRH_FEN);

@@ -27,7 +27,7 @@ extern "C" {
 
 #include <inttypes.h>
 
-void bcm2835_uart_init(void);
+void bcm2835_uart_init(const char *cmdline);
 void bcm2835_uart_putc(uint8_t);
 void bcm2835_uart_putbyte(uint8_t);
 uint8_t bcm2835_uart_getc(void);

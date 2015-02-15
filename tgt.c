@@ -279,7 +279,7 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 
 	cmdline = get_atag_cmdline((atag_header_t *)r1);
 
-	bcm2835_uart_init();
+	bcm2835_uart_init(cmdline);
 
 	puts("Welcome to OmNom Raspberry Pi loader " VERSION "...\n");
 	if (cmdline) {
