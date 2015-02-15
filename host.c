@@ -210,6 +210,7 @@ static void setup_ramranges()
  */
 static avl_tree_t ddt;
 static pthread_mutex_t ddtlock;
+static volatile bool ddt_stop;
 
 struct deduprec {
 	avl_node_t tree;
@@ -480,8 +481,12 @@ static void *populateddt(void *p)
 	struct helperargs *args = p;
 	uint32_t off;
 
-	for (off = args->offset; off + XFER_SIZE < args->len; off += NHELPERS)
+	for (off = args->offset; off + XFER_SIZE < args->len; off += NHELPERS) {
+		if (ddt_stop)
+			break;
+
 		dedupadd(args->buf + off, args->addr + off, XFER_SIZE);
+	}
 
 	free(args);
 
@@ -516,6 +521,8 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 
 	fprintf(stderr, "%s @ %#010x is %u bytes\n", fname, addr, len);
 
+	ddt_stop = false;
+
 	/*
 	 * prepare dedup table
 	 */
@@ -540,6 +547,8 @@ static void upload(const char *fname, uint32_t addr, uint32_t *raddr, uint32_t *
 	for (off = 0; off < len; off += XFER_SIZE)
 		mem_write(mappedfile + off, addr + off,
 			  MIN(XFER_SIZE, len - off));
+
+	ddt_stop = true;
 
 	/*
 	 * wait for helpers to terminate
