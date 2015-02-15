@@ -8,6 +8,8 @@ extern void execute(uint32_t *regs, uint32_t pc);
 extern void memcpy(void *dst, const void *src, uint32_t len);
 extern void memset(void *dst, int val, uint32_t len);
 
+extern char * strstr(const char *as1, const char *as2);
+
 #define	BSWAP_32(x)	(((uint32_t)(x) << 24) | \
 			(((uint32_t)(x) << 8) & 0xff0000) | \
 			(((uint32_t)(x) >> 8) & 0xff00) | \
