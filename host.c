@@ -21,7 +21,6 @@
 #include "atag.h"
 
 #define	KERNEL_ADDR	0x00008000ul
-#define INITRD_ADDR	0x00800000ul
 #define RANDOM_ADDR	~0ul
 
 #define MXINIT(x)	ASSERT(pthread_mutex_init((x), NULL) == 0)
@@ -298,7 +297,7 @@ static void dedupadd(uint8_t *buf, uint32_t addr, uint32_t len)
 
 static void usage(const char *prog)
 {
-	fprintf(stderr, "%s <kernel> <initrd>\n", prog);
+	fprintf(stderr, "%s <kernel> [<initrd>...]\n", prog);
 	exit(1);
 }
 
@@ -650,17 +649,37 @@ int main(int argc, char **argv)
 	uint32_t skipped_bytes;
 	uint32_t total_bytes;
 	uint32_t initrd_addr, initrd_len;
+	int i;
 
-	if (argc != 3)
+	if (argc < 2)
 		usage(argv[0]);
 
 	dedupinit();
 	setup_ramranges();
 
-	upload(argv[1], KERNEL_ADDR, NULL, NULL);
-	upload(argv[2], INITRD_ADDR, &initrd_addr, &initrd_len);
+	for (i = 1; i < argc; i++) {
+		char *fname;
+		char *saddr;
+		uint32_t addr;
 
-	tweak_atags(initrd_addr, initrd_len);
+		fname = argv[i];
+		saddr = strchr(fname, '@');
+
+		if (saddr) {
+			*saddr = '\0';
+
+			addr = strtol(saddr + 1, NULL, 0);
+		} else if (i == 1) {
+			addr = KERNEL_ADDR;
+		} else {
+			addr = RANDOM_ADDR;
+		}
+
+		upload(fname, addr, &initrd_addr, &initrd_len);
+	}
+
+	if (argc > 2)
+		tweak_atags(initrd_addr, initrd_len);
 
 	done(KERNEL_ADDR);
 
