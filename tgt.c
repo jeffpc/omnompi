@@ -329,7 +329,7 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 			default:
 				send_nack();
 				puts("Unknown command\n");
-				goto brick;
+				continue;
 		}
 
 		send_ack();
