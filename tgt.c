@@ -279,14 +279,19 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 
 	cmdline = get_atag_cmdline((atag_header_t *)r2);
 
+	puts("Welcome to OmNom Raspberry Pi loader " VERSION "...\n\n");
+	print_regs(0);
+	puts("\n\n");
 	bcm2835_uart_init(cmdline);
 
 	puts("Welcome to OmNom Raspberry Pi loader " VERSION "...\n");
 	if (cmdline) {
+		puts("\nATAG_CMDLINE:\n");
 		puts("ATAG_CMDLINE:\n");
 		puts(cmdline);
-		puts("\n");
+		puts("\n\n");
 	}
+
 	puts("Ready to receive...\n");
 
 	for (;;) {
