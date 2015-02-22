@@ -249,7 +249,13 @@ get_atag_cmdline(atag_header_t *chain)
 {
 	static char buf[512];
 	atag_cmdline_t *cmd;
+	uint32_t *tmp;
 	uint32_t len;
+
+	/* double check that we have a ATAG (and not a device tree) */
+	tmp = (uint32_t *)chain;
+	if (tmp[1] != 0x54410001)
+		return NULL;
 
 	cmd = (atag_cmdline_t *)atag_find(chain, ATAG_CMDLINE);
 	if (!cmd)
