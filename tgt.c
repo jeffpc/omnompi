@@ -1,4 +1,4 @@
-#include "bcm2835_uart.h"
+#include "uart.h"
 #include "tgt_support.h"
 #include "proto.h"
 #include "lz4.h"

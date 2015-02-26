@@ -19,7 +19,7 @@
  */
 #include <sys/types.h>
 
-#include "bcm2835_uart.h"
+#include "uart.h"
 #include "tgt_support.h"
 
 /*
