@@ -4,7 +4,10 @@ ARMAS=/opt/armtc/usr/gnu/bin/gas
 ARMLD=/opt/armtc/usr/bin/ld
 ARMOBJCOPY=/opt/armtc/usr/gnu/bin/gobjcopy
 
-CFLAGS=-Wall -O2 -g -DDEBUG
+#MODEL=-DPI_1_B_PLUS
+MODEL=-DPI_2_B
+
+CFLAGS=-Wall -O2 -g -DDEBUG $(MODEL)
 ARMCFLAGS=-ffreestanding -DTGT
 VERDEF=-DVERSION='"$(shell git describe --tags --dirty)"'
 

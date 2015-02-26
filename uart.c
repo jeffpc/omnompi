@@ -22,13 +22,21 @@
 #include "uart.h"
 #include "tgt_support.h"
 
+#if defined(PI_2_B)
+#define MMIO_BASE		0x3f000000
+#elif defined(PI_1_B_PLUS)
+#define MMIO_BASE		0x20000000
+#else
+#error Unknown board
+#endif
+
 /*
  * The primary serial console that we end up using is the normal UART, not
  * the mini-uart that shares interrupts and registers with the SPI masters
  * as well.
  */
 
-#define	UART_BASE		0x20201000
+#define	UART_BASE		(MMIO_BASE + 0x00201000)
 #define	UART_DR			0x0
 #define	UART_FR			0x18
 #define	UART_IBRD		0x24
@@ -56,7 +64,7 @@
  * All we care about are pins 14 and 15 for the UART.  Specifically, alt0
  * for GPIO14 is TXD0 and GPIO15 is RXD0. Those are controlled by FSEL1.
  */
-#define	GPIO_BASE	0x20200000
+#define	GPIO_BASE	(MMIO_BASE + 0x00200000)
 #define	GPIO_FSEL1	0x4
 #define	GPIO_PUD	0x94
 #define	GPIO_PUDCLK0	0x98
