@@ -20,7 +20,7 @@ host: host.c lz4.c atag.c
 	$(CC) $(CFLAGS) $(VERDEF) -lumem -lcrypto -lpthread -o $@ $^ /usr/lib/libavl.so.1
 
 tgt: tgt.c tgt_start.s uart.c tgt_support.c
-	$(ARMCC) -x assembler-with-cpp -c -o tgt_start.o tgt_start.s
+	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -x assembler-with-cpp -c -o tgt_start.o tgt_start.s
 	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) $(VERDEF) -c -o tgt.o tgt.c
 	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o atag.o atag.c
 	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o uart.o uart.c
