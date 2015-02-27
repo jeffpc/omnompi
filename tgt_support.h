@@ -1,6 +1,8 @@
 #ifndef __TGT_SUPPORT_H
 #define __TGT_SUPPORT_H
 
+typedef uint32_t size_t; /* HACK */
+
 extern uint32_t arm_reg_read(uint32_t);
 extern void arm_reg_write(uint32_t, uint32_t);
 extern void execute(uint32_t *regs, uint32_t pc);
@@ -9,8 +11,7 @@ extern void memcpy(void *dst, const void *src, uint32_t len);
 extern void memset(void *dst, int val, uint32_t len);
 
 extern char * strstr(const char *as1, const char *as2);
-
-#define strlen	__builtin_strlen
+extern size_t strlen(const char *s);
 
 #define	BSWAP_32(x)	(((uint32_t)(x) << 24) | \
 			(((uint32_t)(x) << 8) & 0xff0000) | \

@@ -56,3 +56,13 @@ char *strstr(const char *as1, const char *as2)
 
 	return (NULL);
 }
+
+size_t
+strlen(const char *s)
+{
+	const char *s0 = s + 1;
+
+	while (*s++ != '\0')
+		;
+	return (s - s0);
+}
