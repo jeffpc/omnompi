@@ -4,13 +4,11 @@ ARMAS=/opt/armtc/usr/gnu/bin/gas
 ARMLD=/opt/armtc/usr/bin/ld
 ARMOBJCOPY=/opt/armtc/usr/gnu/bin/gobjcopy
 
-#MODEL=-DPI_1_B_PLUS
-MODEL=-DPI_2_B
-
-CFLAGS=-Wall -O2 -g -DDEBUG $(MODEL)
+CFLAGS=-Wall -O2 -g -DDEBUG
 ARMCFLAGS=-ffreestanding -DTGT
 VERDEF=-DVERSION='"$(shell git describe --tags --dirty)"'
 
+#LIBS=libuart/libuart-bcm2835.a
 LIBS=libuart/libuart-bcm2836.a
 
 all: host tgt

@@ -6,14 +6,6 @@
 #include "atag.h"
 #include "libuart/uart.h"
 
-#if defined(PI_2_B)
-#define PLAT_NAME	"Raspberry Pi2"
-#elif defined(PI_1_B_PLUS)
-#define PLAT_NAME	"Raspberry Pi"
-#else
-#error Unknown board
-#endif
-
 /* we only actually care about the first 14 regs */
 #define NUMREGS		14
 uint32_t regs[NUMREGS];
@@ -296,7 +288,9 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 	cmdline = get_atag_cmdline((atag_header_t *)r2);
 	uart_init();
 
-	puts("Welcome to OmNom " PLAT_NAME " loader " VERSION "...\n\n");
+	puts("Welcome to OmNom ");
+	puts(platform_name);
+	puts(" loader " VERSION "...\n\n");
 	print_regs(0);
 	puts("\n\n");
 
