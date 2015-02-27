@@ -1,8 +1,6 @@
 #ifndef __PROTO_H
 #define __PROTO_H
 
-#include <stdint.h>
-
 #define ARM_PAGESIZE	4096
 
 #define XFER_SIZE	(16 * 1024)

@@ -1,8 +1,10 @@
-#include "uart.h"
+#include <stdint.h>
+
 #include "tgt_support.h"
 #include "proto.h"
 #include "lz4.h"
 #include "atag.h"
+#include "libuart/uart.h"
 
 #if defined(PI_2_B)
 #define PLAT_NAME	"Raspberry Pi2"
@@ -21,7 +23,7 @@ void puts(const char *str)
 	const char *c = str;
 
 	while (*c != '\0')
-		bcm2835_uart_putc(*c++);
+		uart_putc(*c++);
 }
 
 static void
@@ -55,7 +57,7 @@ void read(void *buf, uint32_t len)
 	uint8_t *ptr = buf;
 
 	while (len) {
-		*ptr = bcm2835_uart_getbyte();
+		*ptr = uart_getbyte();
 
 		ptr++;
 		len--;
@@ -67,7 +69,7 @@ void write(void *buf, uint32_t len)
 	uint8_t *ptr = buf;
 
 	while (len) {
-		bcm2835_uart_putbyte(*ptr);
+		uart_putbyte(*ptr);
 
 		ptr++;
 		len--;
@@ -246,7 +248,7 @@ static void handle_done()
 	print_regs(pc);
 
 	puts("\nPress any key to boot\n");
-	bcm2835_uart_getc();
+	uart_getc();
 	puts("Bye!\n=================\n");
 
 	execute(regs, pc);
@@ -292,7 +294,7 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 	regs[2] = r2;
 
 	cmdline = get_atag_cmdline((atag_header_t *)r2);
-	bcm2835_uart_init(cmdline);
+	uart_init();
 
 	puts("Welcome to OmNom " PLAT_NAME " loader " VERSION "...\n\n");
 	print_regs(0);
