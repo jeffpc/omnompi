@@ -273,6 +273,30 @@ get_atag_cmdline(atag_header_t *chain)
 	return buf;
 }
 
+static uint32_t
+uart_get_clk(const char *cmdline)
+{
+	uint32_t clk;
+	char *tmp;
+
+	if (!cmdline)
+		return 0;
+
+	tmp = strstr(cmdline, uart_clock_string);
+	if (!tmp)
+		return 0;
+
+	tmp += strlen(uart_clock_string);
+
+	clk = 0;
+	while ((*tmp >= '0') && (*tmp <= '9')) {
+		clk = (clk * 10) + (*tmp - '0');
+		tmp++;
+	}
+
+	return clk;
+}
+
 void main(uint32_t r0, uint32_t r1, uint32_t r2)
 {
 	char *cmdline;
@@ -286,7 +310,7 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 	regs[2] = r2;
 
 	cmdline = get_atag_cmdline((atag_header_t *)r2);
-	uart_init();
+	uart_init(uart_get_clk(cmdline));
 
 	puts("Welcome to OmNom ");
 	puts(platform_name);
