@@ -5,34 +5,43 @@ ARMLD=/opt/armtc/usr/bin/ld
 ARMOBJCOPY=/opt/armtc/usr/gnu/bin/gobjcopy
 
 CFLAGS=-Wall -O2 -g -DDEBUG
-ARMCFLAGS=-ffreestanding -DTGT
+ARMCFLAGS=-ffreestanding -DTGT -march=armv7-a
+CFLAGSV6=
+CFLAGSV7=-march=armv7-a
 VERDEF=-DVERSION='"$(shell git describe --tags --dirty)"'
 
-#LIBS=libuart/libuart-bcm2835.a
-LIBS=libuart/libuart-bcm2836.a
+LIBSV6=libuart/libuart-bcm2835.a
+LIBSV7=libuart/libuart-bcm2836.a
 
-all: host tgt
+all: host
+	VER=6 gmake tgt
+	VER=7 gmake tgt
 
 clean:
-	rm -f host tgt
+	rm -f host tgt-6 tgt-7 *.o
+	cd libuart; gmake clean
 
-libuart/libuart-bcm2836.a:
+tgt: $(LIBSV$(VER)) tgt-$(VER)
+	@echo > /dev/null
+
+libuart/libuart-%.a:
 	cd libuart; CC=$(ARMCC) gmake
 
 host: host.c lz4.c atag.c
 	$(CC) $(CFLAGS) $(VERDEF) -lumem -lcrypto -lpthread -o $@ $^ /usr/lib/libavl.so.1
 
-tgt: tgt.c tgt_start.s tgt_support.c $(LIBS)
-	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -x assembler-with-cpp -c -o tgt_start.o tgt_start.s
-	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) $(VERDEF) -c -o tgt.o tgt.c
-	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o atag.o atag.c
-	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o tgt_support.o tgt_support.c
-	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) -c -o lz4.o lz4.c
-	$(ARMLD) -dy -b -znointerp -o tgt.elf -e _start -M mapfile \
-		tgt_start.o \
-		tgt.o \
-		tgt_support.o \
-		lz4.o \
-		atag.o \
-		$(LIBS)
-	$(ARMOBJCOPY) tgt.elf -O binary $@
+%-$(VER).o: %.s
+	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) $(CFLAGSV$(VER)) \
+		-x assembler-with-cpp -c -o $@ $<
+
+%-$(VER).o: %.c
+	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) $(CFLAGSV$(VER)) \
+		$(VERDEF) -c -o $@ $<
+
+tgt-%.elf: tgt-%.o tgt_start-%.o tgt_support-%.o atag-%.o lz4-%.o $(LIBSV$(VER))
+	$(ARMLD) -dy -b -znointerp -o $@ -e _start -M mapfile $^
+
+tgt-%: tgt-%.elf
+	$(ARMOBJCOPY) $< -O binary $@
+
+.KEEP: tgt-6.elf tgt-7.elf

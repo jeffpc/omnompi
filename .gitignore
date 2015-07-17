@@ -1,4 +1,4 @@
 *.o
 host
-tgt
-tgt.elf
+tgt-?
+tgt-?.elf
