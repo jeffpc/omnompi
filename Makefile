@@ -5,7 +5,7 @@ ARMLD=/opt/armtc/usr/bin/ld
 ARMOBJCOPY=/opt/armtc/usr/gnu/bin/gobjcopy
 
 CFLAGS=-Wall -O2 -g -DDEBUG
-ARMCFLAGS=-ffreestanding -DTGT -march=armv7-a
+ARMCFLAGS=-ffreestanding -DTGT -fno-strict-aliasing
 CFLAGSV6=
 CFLAGSV7=-march=armv7-a
 VERDEF=-DVERSION='"$(shell git describe --tags --dirty)"'
