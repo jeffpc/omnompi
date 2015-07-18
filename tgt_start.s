@@ -41,13 +41,3 @@ x:
 	ldm	r0, { r0-r13 }
 	bx	r14
 	SET_SIZE(execute)
-
-	ENTRY(arm_reg_read)
-	ldr r0, [r0]
-	bx lr
-	SET_SIZE(arm_reg_read)
-
-	ENTRY(arm_reg_write)
-	str r1, [r0]
-	bx lr
-	SET_SIZE(arm_reg_write)
