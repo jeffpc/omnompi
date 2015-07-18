@@ -648,6 +648,7 @@ int main(int argc, char **argv)
 {
 	uint32_t skipped_bytes;
 	uint32_t total_bytes;
+	uint32_t kernel_addr = KERNEL_ADDR;
 	uint32_t initrd_addr, initrd_len;
 	int i;
 
@@ -673,8 +674,11 @@ int main(int argc, char **argv)
 			*saddr = '\0';
 
 			addr = strtol(saddr + 1, NULL, 0);
+
+			if (i == 1)
+				kernel_addr = addr;
 		} else if (i == 1) {
-			addr = KERNEL_ADDR;
+			addr = kernel_addr;
 		} else {
 			addr = RANDOM_ADDR;
 		}
@@ -685,7 +689,7 @@ int main(int argc, char **argv)
 	if (argc > 2)
 		tweak_atags(initrd_addr, initrd_len);
 
-	done(KERNEL_ADDR);
+	done(kernel_addr);
 
 	skipped_bytes = zeroed_bytes + copied_bytes;
 	total_bytes = skipped_bytes + raw_bytes;
