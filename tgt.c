@@ -326,9 +326,12 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 	cmdline = get_atag_cmdline((atag_header_t *)r2);
 	uart_init(uart_get_clk(cmdline));
 
-	puts("Welcome to OmNom ");
+	puts("\n\nWelcome to OmNom ");
 	puts(platform_name);
-	puts(" loader " VERSION "...\n\n");
+	puts(" loader " VERSION "...\n");
+	puts("(using libuart version ");
+	puts(libuart_version);
+	puts(")\n\n");
 	print_regs(0);
 	puts("\n\n");
 
