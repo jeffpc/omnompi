@@ -631,7 +631,8 @@ static void done(uint32_t pc, int autoboot)
 	enum cmd cmd;
 	struct xferdone xfer;
 
-	fprintf(stderr, "Done.  Setting PC = %#010x...", pc);
+	fprintf(stderr, "Done.  Setting PC = %#010x (%sautoboot)...",
+		pc, autoboot ? "" : "non-");
 
 	cmd = htonl(CMD_DONE);
 	xfer.pc = htonl(pc);
@@ -692,7 +693,7 @@ void host_xfer(int _in, int _out, int argc, char **argv, int argskip)
 	if (argc > argskip)
 		tweak_atags(initrd_addr, initrd_len);
 
-	done(kernel_addr, _in == STDIN_FILENO);
+	done(kernel_addr, _in != STDIN_FILENO);
 
 	skipped_bytes = zeroed_bytes + copied_bytes;
 	total_bytes = skipped_bytes + raw_bytes;
