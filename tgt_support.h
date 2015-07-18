@@ -13,11 +13,7 @@ extern void memset(void *dst, int val, uint32_t len);
 extern char * strstr(const char *as1, const char *as2);
 extern size_t strlen(const char *s);
 
-#define	BSWAP_32(x)	(((uint32_t)(x) << 24) | \
-			(((uint32_t)(x) << 8) & 0xff0000) | \
-			(((uint32_t)(x) >> 8) & 0xff00) | \
-			((uint32_t)(x)  >> 24))
-
+#define	BSWAP_32(x)	__builtin_bswap32(x)
 #define BE_32(x)	BSWAP_32(x)
 
 #define	BE_IN8(xa) \
