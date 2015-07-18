@@ -239,7 +239,21 @@ static void handle_done()
 
 	print_regs(pc);
 
-	puts("\nPress any key to boot\n");
+	puts("\nUART statistics:");
+	puts("\n\tRX bytes:       ");
+	puthex(uart_stats.rx_bytes);
+	puts("\n\tTX bytes:       ");
+	puthex(uart_stats.tx_bytes);
+	puts("\n\tOverrun Errors: ");
+	puthex(uart_stats.overrun_error);
+	puts("\n\tBreak Errors:   ");
+	puthex(uart_stats.break_error);
+	puts("\n\tParity Errors:  ");
+	puthex(uart_stats.parity_error);
+	puts("\n\tFraming Errors: ");
+	puthex(uart_stats.framing_error);
+
+	puts("\n\nPress any key to boot\n");
 	uart_getc();
 	puts("Bye!\n=================\n");
 
