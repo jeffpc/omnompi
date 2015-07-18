@@ -13,7 +13,7 @@ VERDEF=-DVERSION='"$(shell git describe --tags --dirty)"'
 LIBSV6=libuart/libuart-bcm2835.a
 LIBSV7=libuart/libuart-bcm2836.a
 
-all: host
+all: host host-raw
 	VER=6 gmake tgt
 	VER=7 gmake tgt
 
@@ -27,7 +27,10 @@ tgt: $(LIBSV$(VER)) tgt-$(VER)
 libuart/libuart-%.a:
 	cd libuart; CC=$(ARMCC) gmake
 
-host: host.c lz4.c atag.c
+host: host.c host-xfer.c lz4.c atag.c
+	$(CC) $(CFLAGS) $(VERDEF) -lumem -lcrypto -lpthread -o $@ $^ /usr/lib/libavl.so.1
+
+host-raw: host-raw.c host-xfer.c lz4.c atag.c
 	$(CC) $(CFLAGS) $(VERDEF) -lumem -lcrypto -lpthread -o $@ $^ /usr/lib/libavl.so.1
 
 %-$(VER).o: %.s

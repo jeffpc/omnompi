@@ -225,19 +225,19 @@ static void print_regs(uint32_t pc)
 
 static void handle_done()
 {
-	uint32_t pc;
+	struct xferdone xfer;
 
-	read(&pc, sizeof(pc));
+	read(&xfer, sizeof(xfer));
 
-	pc = BSWAP_32(pc);
+	xfer.pc = BSWAP_32(xfer.pc);
 
 	send_ack();
 
 	puts("About to execute: ");
-	puthex(pc);
+	puthex(xfer.pc);
 	puts("\n");
 
-	print_regs(pc);
+	print_regs(xfer.pc);
 
 	puts("\nUART statistics:");
 	puts("\n\tRX bytes:       ");
@@ -253,11 +253,27 @@ static void handle_done()
 	puts("\n\tFraming Errors: ");
 	puthex(uart_stats.framing_error);
 
-	puts("\n\nPress any key to boot\n");
-	uart_getc();
+	if (xfer.autoboot) {
+		puts("\n\nAutobooting...\n");
+	} else {
+		puts("\n\nPress '#' key to boot\n");
+
+		for (;;) {
+			uint8_t byte;
+
+			byte = uart_getbyte();
+			puts("read char: ");
+			puthex(byte);
+			puts("\n");
+
+			if (byte == '#')
+				break;
+		}
+	}
+
 	puts("Bye!\n=================\n");
 
-	execute(regs, pc);
+	execute(regs, xfer.pc);
 }
 
 static char *
@@ -343,7 +359,11 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 
 	puts("Ready to receive...\n");
 
-	/* synchronize input and output by looking for "###" */
+	/*
+	 * synchronize input and output by sending "!!!" and looking for
+	 * "###"
+	 */
+	puts("!!!");
 	for (;;) {
 		if (uart_getbyte() != '#')
 			continue;

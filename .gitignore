@@ -1,4 +1,5 @@
 *.o
 host
+host-raw
 tgt-?
 tgt-?.elf

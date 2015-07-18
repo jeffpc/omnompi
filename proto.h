@@ -32,4 +32,9 @@ struct xferreg {
 	uint32_t val;
 };
 
+struct xferdone {
+	uint32_t pc;
+	uint32_t autoboot;
+};
+
 #endif
