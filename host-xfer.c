@@ -20,6 +20,7 @@
 #include "lz4.h"
 #include "atag.h"
 
+#define	STAGE2_ADDR	0x0c900000ul
 #define	KERNEL_ADDR	0x00008000ul
 #define RANDOM_ADDR	~0ul
 
@@ -180,7 +181,6 @@ overlap:
 
 static void setup_ramranges()
 {
-	uint32_t tgt_addr, tgt_len;
 	struct ramrange *r;
 
 	avl_create(&rr, rrcmp, sizeof(struct ramrange),
@@ -194,17 +194,22 @@ static void setup_ramranges()
 	avl_add(&rr, r);
 
 	/*
+	 * "allocate" the first 32kB because that's where we end up with
+	 * ATAGs
+	 */
+	alloc_addr(0, 0x8000);
+}
+
+static void setup_ramranges_stage2(void)
+{
+	uint32_t tgt_addr, tgt_len;
+
+	/*
 	 * "allocate" what our target binary uses so we don't accidentally
 	 * overwrite ourselves
 	 */
 	get_tgt_addr(&tgt_addr, &tgt_len);
 	alloc_addr(tgt_addr, P2ROUNDUP(tgt_len, ARM_PAGESIZE));
-
-	/*
-	 * "allocate" the first 32kB because that's where we end up with
-	 * ATAGs
-	 */
-	alloc_addr(0, 0x8000);
 }
 
 /*
@@ -644,14 +649,56 @@ static void done(uint32_t pc, int autoboot)
 	checkstatus();
 }
 
-void host_xfer(int _in, int _out, int argc, char **argv, int argskip)
+static void upload_stage2(char *fname)
+{
+	struct stat statinfo;
+	uint8_t *mappedfile;
+	char *saddr;
+	uint32_t addr;
+	uint32_t len;
+	uint32_t tmp;
+	int ret;
+	int fd;
+
+	saddr = strchr(fname, '@');
+	if (saddr) {
+		*saddr = '\0';
+
+		addr = strtol(saddr + 1, NULL, 0);
+	} else {
+		addr = STAGE2_ADDR;
+	}
+
+	fd = open(fname, O_RDONLY);
+	ASSERT(fd >= 0);
+
+	ret = fstat(fd, &statinfo);
+	ASSERT(ret == 0);
+
+	mappedfile = (void *)mmap(NULL, statinfo.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	ASSERT(mappedfile != MAP_FAILED);
+
+	len = statinfo.st_size;
+
+	addr = alloc_addr(addr, len);
+
+	fprintf(stderr, "%s @ %#010x is %u bytes\n", fname, addr, len);
+
+	tmp = htonl(addr);
+	fullwrite(out, &tmp, sizeof(tmp));
+	tmp = htonl(len);
+	fullwrite(out, &tmp, sizeof(tmp));
+
+	fprintf(stderr, "  stage2 of %u bytes to %#010x...\n", len, addr);
+	fullwrite(out, mappedfile, len);
+
+	compressed_bytes += len;
+	raw_bytes += len;
+}
+
+static void __host_xfer(int _in, int _out, int argc, char **argv, int argskip)
 {
 	extern void usage(const char *);
-	uint32_t skipped_bytes;
-	uint32_t total_bytes;
-	uint32_t kernel_addr = KERNEL_ADDR;
-	uint32_t initrd_addr, initrd_len;
-	int i;
 
 	if (argc <= argskip)
 		usage(argv[0]);
@@ -661,12 +708,24 @@ void host_xfer(int _in, int _out, int argc, char **argv, int argskip)
 
 	/* synchronize */
 	fullwrite(out, "###", 3);
+}
+
+void host_xfer(int _in, int _out, int argc, char **argv, int argskip)
+{
+	extern void usage(const char *);
+	uint32_t skipped_bytes;
+	uint32_t total_bytes;
+	uint32_t kernel_addr = KERNEL_ADDR;
+	uint32_t initrd_addr, initrd_len;
+	int i;
+
+	__host_xfer(_in, _out, argc, argv, argskip);
 	checkstatus();
 
 	dedupinit();
-	setup_ramranges();
+	setup_ramranges_stage2();
 
-	for (i = argskip; i < argc; i++) {
+	for (i = argskip + 1; i < argc; i++) {
 		char *fname;
 		char *saddr;
 		uint32_t addr;
@@ -679,7 +738,7 @@ void host_xfer(int _in, int _out, int argc, char **argv, int argskip)
 
 			addr = strtol(saddr + 1, NULL, 0);
 
-			if (i == argskip)
+			if (i == argskip + 1)
 				kernel_addr = addr;
 		} else if (i == argskip) {
 			addr = kernel_addr;
@@ -690,7 +749,7 @@ void host_xfer(int _in, int _out, int argc, char **argv, int argskip)
 		upload(fname, addr, &initrd_addr, &initrd_len);
 	}
 
-	if (argc > argskip)
+	if (argc > argskip + 1)
 		tweak_atags(initrd_addr, initrd_len);
 
 	done(kernel_addr, _in != STDIN_FILENO);
@@ -705,4 +764,13 @@ void host_xfer(int _in, int _out, int argc, char **argv, int argskip)
 	fprintf(stderr, "copied bytes     %8u %f\n", copied_bytes, P(copied_bytes));
 	fprintf(stderr, "raw bytes        %8u %f\n", raw_bytes, P(raw_bytes));
 	fprintf(stderr, "compressed bytes %8u %f\n", compressed_bytes, P(compressed_bytes));
+}
+
+void host_xfer_stage2(int _in, int _out, int argc, char **argv, int argskip)
+{
+	__host_xfer(_in, _out, argc, argv, argskip);
+
+	setup_ramranges();
+
+	upload_stage2(argv[argskip]);
 }

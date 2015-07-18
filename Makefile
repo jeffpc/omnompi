@@ -18,10 +18,11 @@ all: host host-raw
 	VER=7 gmake tgt
 
 clean:
-	rm -f host tgt-6 tgt-7 *.o
+	rm -f host host-raw
+	rm -f tgt-stage?-? tgt-stage?-?.elf *.o
 	cd libuart; gmake clean
 
-tgt: $(LIBSV$(VER)) tgt-$(VER)
+tgt: $(LIBSV$(VER)) tgt-stage1-$(VER) tgt-stage2-$(VER)
 	@echo > /dev/null
 
 libuart/libuart-%.a:
@@ -41,10 +42,15 @@ host-raw: host-raw.c host-xfer.c lz4.c atag.c
 	$(ARMCC) $(CFLAGS) $(ARMCFLAGS) $(CFLAGSV$(VER)) \
 		$(VERDEF) -c -o $@ $<
 
-tgt-%.elf: tgt-%.o tgt_start-%.o tgt_support-%.o atag-%.o lz4-%.o $(LIBSV$(VER))
-	$(ARMLD) -dy -b -znointerp -o $@ -e _start -M mapfile $^
+tgt-stage1-%.elf: stage1-%.o tgt_start-%.o tgt_support-%.o atag-%.o $(LIBSV$(VER))
+	$(ARMLD) -dy -b -znointerp -o $@ -e _start -M mapfile-stage1 $^
+
+tgt-stage2-%.elf: stage2-%.o tgt_start-%.o tgt_support-%.o atag-%.o lz4-%.o $(LIBSV$(VER))
+	$(ARMLD) -dy -b -znointerp -o $@ -e _start -M mapfile-stage2 $^
 
 tgt-%: tgt-%.elf
 	$(ARMOBJCOPY) $< -O binary $@
 
-.KEEP: tgt-6.elf tgt-7.elf
+.KEEP: \
+	tgt-stage1-6.elf tgt-stage1-7.elf \
+	tgt-stage2-6.elf tgt-stage2-7.elf

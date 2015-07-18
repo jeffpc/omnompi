@@ -1,5 +1,5 @@
 *.o
 host
 host-raw
-tgt-?
-tgt-?.elf
+tgt-stage?-?
+tgt-stage?-?.elf

@@ -10,7 +10,7 @@
 
 void usage(const char *prog)
 {
-	fprintf(stderr, "%s <kernel> <dev> [<initrd>...]\n", prog);
+	fprintf(stderr, "%s <dev> <stage2> [<kernel> <initrd>...]\n", prog);
 	exit(1);
 }
 
@@ -66,6 +66,12 @@ int main(int argc, char **argv)
 
 	if (tcsetattr(dev, TCSAFLUSH, &termios) == -1)
 		usage(argv[0]);
+
+	dump(dev, 1);
+
+	fprintf(stderr, "Commencing stage2 transfer...\n");
+
+	host_xfer_stage2(dev, dev, argc, argv, 2);
 
 	dump(dev, 1);
 

@@ -5,6 +5,11 @@ typedef uint32_t size_t; /* HACK */
 
 extern void execute(uint32_t *regs, uint32_t pc);
 
+extern void puts(const char *str);
+extern void puthex(uint32_t v);
+extern void read(void *buf, uint32_t len);
+extern void synchronize(void);
+
 extern void memcpy(void *dst, const void *src, uint32_t len);
 extern void memset(void *dst, int val, uint32_t len);
 

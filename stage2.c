@@ -10,52 +10,6 @@
 #define NUMREGS		14
 uint32_t regs[NUMREGS];
 
-void puts(const char *str)
-{
-	const char *c = str;
-
-	while (*c != '\0')
-		uart_putc(*c++);
-}
-
-static void
-puthex(uint32_t v)
-{
-	char buf[2 + 8 + 1];
-	char c;
-	int i;
-
-	buf[0] = '0';
-	buf[1] = 'x';
-	buf[10] = '\0';
-
-	for (i = 7; i >= 0; i--) {
-		c = v & 0xf;
-		v >>= 4;
-
-		if (c > 9)
-			c += 'a' - 10;
-		else
-			c += '0';
-
-		buf[2 + i] = c;
-	}
-
-	puts(buf);
-}
-
-void read(void *buf, uint32_t len)
-{
-	uint8_t *ptr = buf;
-
-	while (len) {
-		*ptr = uart_getbyte();
-
-		ptr++;
-		len--;
-	}
-}
-
 void write(void *buf, uint32_t len)
 {
 	uint8_t *ptr = buf;
@@ -344,7 +298,7 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 
 	puts("\n\nWelcome to OmNom ");
 	puts(platform_name);
-	puts(" loader " VERSION "...\n");
+	puts(" stage 2 loader " VERSION "...\n");
 	puts("(using libuart version ");
 	puts(libuart_version);
 	puts(")\n\n");
