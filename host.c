@@ -654,6 +654,10 @@ int main(int argc, char **argv)
 	if (argc < 2)
 		usage(argv[0]);
 
+	/* synchronize */
+	fullwrite(1, "###", 3);
+	checkstatus();
+
 	dedupinit();
 	setup_ramranges();
 

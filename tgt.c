@@ -326,6 +326,22 @@ void main(uint32_t r0, uint32_t r1, uint32_t r2)
 
 	puts("Ready to receive...\n");
 
+	/* synchronize input and output by looking for "###" */
+	for (;;) {
+		if (uart_getbyte() != '#')
+			continue;
+
+		if (uart_getbyte() != '#')
+			continue;
+
+		if (uart_getbyte() != '#')
+			continue;
+
+		break;
+	}
+
+	send_ack();
+
 	for (;;) {
 		enum cmd cmd;
 
