@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/debug.h>
 
 #define BSWAP16(x)	(((x & 0xff) << 8) | ((x & 0xff00) >> 8));
 
@@ -13,6 +14,42 @@ void usage(const char *prog)
 {
 	fprintf(stderr, "%s <dev>\n", prog);
 	exit(1);
+}
+
+static void fullread(int fd, void *buf, uint32_t len)
+{
+	uint8_t *ptr = buf;
+	ssize_t ret;
+	size_t x;
+
+	x = 0;
+	while (x != len) {
+		ret = read(fd, &ptr[x], len - x);
+		if (!ret)
+			ASSERT(0);
+		if (ret == -1)
+			ASSERT(0);
+
+		x += ret;
+	}
+}
+
+static void fullwrite(int fd, void *buf, uint32_t len)
+{
+	uint8_t *ptr = buf;
+	ssize_t ret;
+	size_t x;
+
+	x = 0;
+	while (x != len) {
+		ret = write(fd, &ptr[x], len - x);
+		if (!ret)
+			ASSERT(0);
+		if (ret == -1)
+			ASSERT(0);
+
+		x += ret;
+	}
 }
 
 static void
@@ -47,11 +84,11 @@ int process(int fd, uint16_t sent)
 	memset(sent_char, 0, sizeof(sent_char));
 
 	swapped = BSWAP16(sent);
-	write(fd, &swapped, 2);
+	fullwrite(fd, &swapped, 2);
 
-	read(fd, recv_char, 4);
+	fullread(fd, recv_char, 4);
 
-	read(fd, &recv_int, 2);
+	fullread(fd, &recv_int, 2);
 	swapped = BSWAP16(recv_int);
 
 	if (swapped != sent) {
