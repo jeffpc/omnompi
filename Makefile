@@ -18,7 +18,7 @@ all: host host-raw
 	VER=7 gmake tgt
 
 clean:
-	rm -f host tgt-6 tgt-7 *.o
+	rm -f host host-raw tgt-6 tgt-7 *.o
 	cd libuart; gmake clean
 
 tgt: $(LIBSV$(VER)) tgt-$(VER)
