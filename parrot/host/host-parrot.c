@@ -16,6 +16,29 @@ void usage(const char *prog)
 	exit(1);
 }
 
+static void dump(int fd)
+{
+	int lt = 0;
+
+	for (;;) {
+		uint8_t byte;
+		int ret;
+
+		ret = read(fd, &byte, 1);
+		if (ret < 0)
+			break;
+
+		write(STDOUT_FILENO, &byte, 1);
+
+		if (byte == '<')
+			lt++;
+		else if (byte == '>' && lt)
+			break;
+		else
+			lt = 0;
+	}
+}
+
 static void fullread(int fd, void *buf, uint32_t len)
 {
 	uint8_t *ptr = buf;
@@ -111,7 +134,6 @@ int main(int argc, char **argv)
 {
 	struct termios termios;
 	uint16_t i;
-	char buf[3];
 	int dev;
 
 	if (argc < 2)
@@ -138,12 +160,7 @@ int main(int argc, char **argv)
 	if (tcsetattr(dev, TCSAFLUSH, &termios) == -1)
 		usage(argv[0]);
 
-	memset(buf, 0, sizeof(buf));
-	read(dev, buf, 2);
-	if (strcmp("<>", buf)) {
-		fprintf(stderr, "Wrong marker received: '%s'", buf);
-		exit(1);
-	}
+	dump(dev);
 
 	for (i = 0; i <= 0xffff; i++)
 		process(dev, i);
