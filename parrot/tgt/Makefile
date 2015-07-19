@@ -1,14 +1,4 @@
-CC=gcc
-ARMCC=/opt/armtc/usr/bin/arm-pc-solaris2.11-gcc
-ARMAS=/opt/armtc/usr/gnu/bin/gas
-ARMLD=/opt/armtc/usr/bin/ld
-ARMOBJCOPY=/opt/armtc/usr/gnu/bin/gobjcopy
-
-CFLAGS=-Wall -O2 -g -DDEBUG
-ARMCFLAGS=-ffreestanding -DTGT -fno-strict-aliasing
-CFLAGSV6=
-CFLAGSV7=-march=armv7-a
-VERDEF=-DVERSION='"$(shell git describe --tags --dirty)"'
+include ../../Makefile.master
 
 LIBSV6=../../libuart/libuart-bcm2835.a
 LIBSV7=../../libuart/libuart-bcm2836.a
