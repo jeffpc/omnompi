@@ -11,7 +11,7 @@
 
 void usage(const char *prog)
 {
-	fprintf(stderr, "%s <kernel> <dev> [<initrd>...]\n", prog);
+	fprintf(stderr, "%s <dev>\n", prog);
 	exit(1);
 }
 
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 	char buf[3];
 	int dev;
 
-	if (argc < 3)
+	if (argc < 2)
 		usage(argv[0]);
 
 	dev = open(argv[1], O_RDWR);
