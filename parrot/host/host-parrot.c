@@ -115,14 +115,14 @@ int process(int fd, uint16_t sent)
 	swapped = BSWAP16(recv_int);
 
 	if (swapped != sent) {
-		fprintf(stderr, "Sent '%d' received '%d'\n", sent,
+		fprintf(stderr, "Sent '%04x' received '%04x' (int)\n", sent,
 			swapped);
 		exit(1);
 	}
 
 	hex(sent, sent_char);
 	if (strcmp(sent_char, recv_char)) {
-		fprintf(stderr, "Sent '%s' received '%s'\n", sent_char,
+		fprintf(stderr, "Sent '%s' received '%s' (str)\n", sent_char,
 		       recv_char);
 		exit(1);
 	}
