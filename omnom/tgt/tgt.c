@@ -1,10 +1,10 @@
 #include <stdint.h>
 
-#include "tgt_support.h"
-#include "proto.h"
-#include "lz4.h"
-#include "atag.h"
-#include "libuart/uart.h"
+#include "../tgt_support.h"
+#include "../proto.h"
+#include "../lz4.h"
+#include "../atag.h"
+#include "../../libuart/uart.h"
 
 /* we only actually care about the first 14 regs */
 #define NUMREGS		14

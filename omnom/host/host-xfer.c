@@ -16,9 +16,9 @@
 #include <openssl/sha.h>
 #include <pthread.h>
 
-#include "proto.h"
-#include "lz4.h"
-#include "atag.h"
+#include "../proto.h"
+#include "../lz4.h"
+#include "../atag.h"
 
 #define	KERNEL_ADDR	0x00008000ul
 #define RANDOM_ADDR	~0ul
