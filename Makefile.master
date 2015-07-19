@@ -6,6 +6,6 @@ ARMOBJCOPY=/opt/armtc/usr/gnu/bin/gobjcopy
 
 CFLAGS=-Wall -O2 -g -DDEBUG
 ARMCFLAGS=-ffreestanding -DTGT -fno-strict-aliasing
-CFLAGSV6=
-CFLAGSV7=-march=armv7-a
+CFLAGSV6=-march=armv6k -mfpu=vfp -mhard-float
+CFLAGSV7=-march=armv7-a -mfpu=vfpv3-d16 -mhard-float
 VERDEF=-DVERSION='"$(shell git describe --tags --dirty)"'
