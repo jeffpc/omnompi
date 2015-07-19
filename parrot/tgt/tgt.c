@@ -81,7 +81,7 @@ static void process(void)
 
 	read(&raw, sizeof(raw));
 
-	val = ((raw & 0xff) << 8) | ((raw && 0xff00) >> 8);
+	val = ((raw & 0xff) << 8) | ((raw & 0xff00) >> 8);
 
 	hex(val);
 	write(&raw, sizeof(raw));

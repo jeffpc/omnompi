@@ -7,7 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define BSWAP16(x)	(((x & 0xff) << 8) | ((x && 0xff00) >> 8));
+#define BSWAP16(x)	(((x & 0xff) << 8) | ((x & 0xff00) >> 8));
 
 void usage(const char *prog)
 {
